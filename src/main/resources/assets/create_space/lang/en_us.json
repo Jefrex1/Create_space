@@ -1,0 +1,13 @@
+{
+  "itemGroup.create_space": "Example Mod Tab",
+  "block.create_space.example_block": "Example Block",
+  "item.create_space.example_item": "Example Item",
+
+  "create_space.configuration.title": "Create: Space! Configs",
+  "create_space.configuration.section.create_space.common.toml": "Create: Space! Configs",
+  "create_space.configuration.section.create_space.common.toml.title": "Create: Space! Configs",
+  "create_space.configuration.items": "Item List",
+  "create_space.configuration.logDirtBlock": "Log Dirt Block",
+  "create_space.configuration.magicNumberIntroduction": "Magic Number Text",
+  "create_space.configuration.magicNumber": "Magic Number"
+}
