@@ -34,9 +34,7 @@ repositories {
     }
     maven { url = "https://maven.createmod.net" } // Create, Ponder, Flywheel
     maven { url = "https://maven.ithundxr.dev/snapshots" } // Registrate
-    maven {
-        url = "https://maven.fuzs.net/releases"
-    }
+    maven {url = "https://maven.fuzs.net/releases"}
     maven {
         name = "Fuzs Mod Resources"
         url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/"
@@ -148,19 +146,24 @@ dependencies {
         exclude group: "maven.modrinth"
         exclude group: "me.fallenbreath"
     }
+
     implementation("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false }
     implementation("net.createmod.ponder:ponder-neoforge:${ponder_version}+mc${minecraft_version}")
     compileOnly("dev.engine-room.flywheel:flywheel-neoforge-api-${minecraft_version}:${flywheel_version}")
     runtimeOnly("dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_version}")
     implementation("com.tterrag.registrate:Registrate:${registrate_version}")
-    api("dev.ryanhcode.sable:sable-common-${project.minecraft_version}:${project.sable_version}") {
+
+    implementation("dev.ryanhcode.sable:sable-neoforge-${project.minecraft_version}:${project.sable_version}") {
         exclude group: "foundry.veil"
     }
+
+    implementation files("libs/create-aeronautics-bundled-1.21.1-1.2.1.jar")
+    implementation files("libs/createpropulsion-1.1.0.jar")
 }
 
 configurations.all {
     resolutionStrategy.capabilitiesResolution.withCapability("foundry.veil:veil") {
-        selectHighestVersion()
+        select("foundry.veil:veil-neoforge-1.21.1:0")
     }
 }
 

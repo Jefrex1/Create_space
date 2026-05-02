@@ -1,0 +1,12 @@
+{
+  "type": "create_space:space",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "minecraft:the_void",
+      "layers": [],
+      "features": false,
+      "lakes": false
+    }
+  }
+}

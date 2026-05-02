@@ -1,6 +1,8 @@
 package com.jefrex.createspace;
 
+import com.jefrex.createspace.block.ModBlocks;
 import com.jefrex.createspace.item.ModItems;
+import net.minecraft.resources.ResourceLocation;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -13,6 +15,9 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 
 @Mod(CreateSpace.MODID)
 public class CreateSpace {
@@ -24,6 +29,7 @@ public class CreateSpace {
         modEventBus.addListener(this::commonSetup);
 
         ModItems.register(modEventBus);
+        ModBlocks.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
 
@@ -39,7 +45,15 @@ public class CreateSpace {
         if(event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
              event.accept(ModItems.AIRGUN);
         }
+        if(event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
+            event.accept(ModBlocks.GRAVITY_FIELD);
+        }
     }
+
+    public static final ResourceKey<Level> SPACE_LEVEL =
+            ResourceKey.create(Registries.DIMENSION,
+                    ResourceLocation.fromNamespaceAndPath(MODID, "space"));
+
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
