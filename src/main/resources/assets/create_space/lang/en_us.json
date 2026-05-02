@@ -2,6 +2,7 @@
   "itemGroup.create_space": "Example Mod Tab",
   "block.create_space.example_block": "Example Block",
   "item.create_space.example_item": "Example Item",
+  "item.create_space.air_gun": "Air gun",
 
   "create_space.configuration.title": "Create: Space! Configs",
   "create_space.configuration.section.create_space.common.toml": "Create: Space! Configs",
