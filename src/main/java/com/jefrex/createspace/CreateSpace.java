@@ -1,6 +1,7 @@
 package com.jefrex.createspace;
 
 import com.jefrex.createspace.block.ModBlocks;
+import com.jefrex.createspace.item.ModCreativeModeTabs;
 import com.jefrex.createspace.item.ModItems;
 import net.minecraft.resources.ResourceLocation;
 import org.slf4j.Logger;
@@ -27,6 +28,8 @@ public class CreateSpace {
 
     public CreateSpace(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);
+
+        ModCreativeModeTabs.register(modEventBus);
 
         ModItems.register(modEventBus);
         ModBlocks.register(modEventBus);

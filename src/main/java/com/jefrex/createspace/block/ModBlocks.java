@@ -18,7 +18,6 @@ public class ModBlocks {
     public static final DeferredBlock<Block> ATMOSPHERE =
             BLOCKS.register("atmosphere", AtmosphereBlock::new);
 
-    // предмет тільки для gravity_field, атмосфера не має предмету
     public static final DeferredItem<BlockItem> GRAVITY_FIELD_ITEM =
             ITEMS.registerSimpleBlockItem("gravity_field", GRAVITY_FIELD);
 

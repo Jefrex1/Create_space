@@ -28,7 +28,6 @@ public class GravityFieldBlock extends Block {
     public void onPlace(BlockState state, Level level, BlockPos pos,
                         BlockState oldState, boolean movedByPiston) {
         if (!level.isClientSide()) {
-            // запускаємо тіковий spread
             level.scheduleTick(pos, this, 1);
         }
     }
@@ -46,12 +45,10 @@ public class GravityFieldBlock extends Block {
     public void tick(BlockState state, ServerLevel level, BlockPos pos,
                      net.minecraft.util.RandomSource random) {
         spreadAtmosphere(level, pos);
-        // продовжуємо тікати
         level.scheduleTick(pos, this, 2);
     }
 
     private void spreadAtmosphere(Level level, BlockPos center) {
-        // BFS від центру — знаходимо повітря поруч з атмосферою або генератором
         Queue<BlockPos> queue = new ArrayDeque<>();
         HashSet<BlockPos> visited = new HashSet<>();
 
@@ -63,35 +60,29 @@ public class GravityFieldBlock extends Block {
         while (!queue.isEmpty() && placed < BLOCKS_PER_TICK) {
             var current = queue.poll();
 
-            // перевіряємо всіх сусідів
             for (var dir : net.minecraft.core.Direction.values()) {
                 var neighbor = current.relative(dir);
 
                 if (visited.contains(neighbor)) continue;
                 visited.add(neighbor);
 
-                // перевіряємо відстань від генератора
                 if (neighbor.distSqr(center) > MAX_SPREAD * MAX_SPREAD) continue;
 
                 var neighborState = level.getBlockState(neighbor);
 
-                // якщо повітря — заповнюємо атмосферою
                 if (neighborState.isAir() && !neighborState.is(ModBlocks.ATMOSPHERE.get())) {
                     level.setBlock(neighbor, ModBlocks.ATMOSPHERE.get().defaultBlockState(), 3);
                     placed++;
                     queue.add(neighbor);
                 }
-                // якщо вже атмосфера — продовжуємо пошук від неї
                 else if (neighborState.is(ModBlocks.ATMOSPHERE.get())) {
                     queue.add(neighbor);
                 }
-                // якщо блок — обходимо його (нічого не робимо, просто не додаємо в чергу)
             }
         }
     }
 
     private void removeAtmosphere(Level level, BlockPos center) {
-        // видаляємо всю атмосферу через BFS
         Queue<BlockPos> queue = new ArrayDeque<>();
         HashSet<BlockPos> visited = new HashSet<>();
 

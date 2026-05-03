@@ -5,6 +5,8 @@
   "item.create_space.example_item": "Example Item",
   "item.create_space.air_gun": "Air gun",
 
+  "creativetab.createspace.createspacetab": "Create: Space!",
+
   "create_space.configuration.title": "Create: Space! Configs",
   "create_space.configuration.section.create_space.common.toml": "Create: Space! Configs",
   "create_space.configuration.section.create_space.common.toml.title": "Create: Space! Configs",

@@ -2,9 +2,11 @@ package com.jefrex.createspace.physic;
 
 import com.jefrex.createspace.CreateSpace;
 import com.jefrex.createspace.block.ModBlocks;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -27,8 +29,8 @@ public class SpacePhysicsHandler {
 
         if (entity instanceof Player player) {
             handlePlayer(player);
-        } else if (entity instanceof net.minecraft.world.entity.item.ItemEntity item) {
-            handleItem(item);
+        } else {
+            handleGenericEntity(entity);
         }
     }
 
@@ -72,7 +74,6 @@ public class SpacePhysicsHandler {
         double vy = data.getDouble("space_vy");
         double vz = data.getDouble("space_vz");
 
-        // оновлюємо швидкість якщо було зіткнення
         if (Math.abs(delta.x) < Math.abs(vx) * 0.5) vx = delta.x;
         if (Math.abs(delta.y) < Math.abs(vy) * 0.5) vy = delta.y;
         if (Math.abs(delta.z) < Math.abs(vz) * 0.5) vz = delta.z;
@@ -83,36 +84,45 @@ public class SpacePhysicsHandler {
         data.putDouble("space_vz", vz);
     }
 
-    private static void handleItem(net.minecraft.world.entity.item.ItemEntity item) {
-        // перевіряємо чи предмет в атмосфері
-        var feetPos = item.blockPosition();
-        if (item.level().getBlockState(feetPos).is(ModBlocks.ATMOSPHERE.get())) return;
+    private static void handleGenericEntity(Entity entity) {
+        if (isInAtmosphere(entity)) {
+            entity.setNoGravity(false);
+            return;
+        }
 
-        var delta = item.getDeltaMovement();
-        // компенсуємо гравітацію і тертя для предметів
-        item.setDeltaMovement(delta.x / 0.98, delta.y + 0.04, delta.z / 0.98);
+        entity.setNoGravity(true);
+        var delta = entity.getDeltaMovement();
+
+        if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+            CreateSpace.LOGGER.info("before: y={}, onGround={}", delta.y, entity.onGround());
+            living.setDeltaMovement(delta.x / 0.98, delta.y / 0.98, delta.z / 0.98);
+            living.setJumping(false);
+            living.xxa = 0;
+            living.yya = 0;
+            living.zza = 0;
+            CreateSpace.LOGGER.info("after: y={}", living.getDeltaMovement().y);
+        } else {
+            entity.setDeltaMovement(delta.x / 0.98, delta.y / 0.98, delta.z / 0.98);
+        }
     }
 
-    private static boolean isInAtmosphere(Player player) {
-        var feetPos = player.blockPosition();
+    private static boolean isInAtmosphere(Entity entity) {
+        var feetPos = entity.blockPosition();
         var headPos = feetPos.above();
 
-        // перевіряємо у звичайному світі
-        if (player.level().getBlockState(feetPos).is(ModBlocks.ATMOSPHERE.get()) ||
-                player.level().getBlockState(headPos).is(ModBlocks.ATMOSPHERE.get())) {
+        if (entity.level().getBlockState(feetPos).is(ModBlocks.ATMOSPHERE.get()) ||
+                entity.level().getBlockState(headPos).is(ModBlocks.ATMOSPHERE.get())) {
             return true;
         }
 
-        // перевіряємо у всіх sub-levels
         var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer
-                .getContainer(player.level());
+                .getContainer(entity.level());
         if (container == null) return false;
 
         for (var subLevel : container.getAllSubLevels()) {
             var localPos = subLevel.logicalPose()
-                    .transformPositionInverse(player.position());
-            var localFeet = net.minecraft.core.BlockPos.containing(
-                    localPos.x, localPos.y, localPos.z);
+                    .transformPositionInverse(entity.position());
+            var localFeet = BlockPos.containing(localPos.x, localPos.y, localPos.z);
             var localHead = localFeet.above();
 
             try {
@@ -124,7 +134,6 @@ public class SpacePhysicsHandler {
                 }
             } catch (Exception ignored) {}
         }
-
         return false;
     }
 }
