@@ -1,42 +1,52 @@
 package com.jefrex.createspace.client.renderer;
 
-import com.jefrex.createspace.entity.SphereEntity;
+import com.jefrex.createspace.CreateSpace;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import foundry.veil.api.client.render.VeilRenderSystem;
 import foundry.veil.api.client.render.shader.program.ShaderProgram;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.entity.EntityRenderer;
-import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.Camera;
 import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
 
-public class SphereRenderer extends EntityRenderer<SphereEntity> {
+public class PlanetRenderer {
 
     private static final ResourceLocation SHADER =
-            ResourceLocation.fromNamespaceAndPath("create_space", "test");
+            ResourceLocation.fromNamespaceAndPath("create_space", "planet");
 
-    public SphereRenderer(EntityRendererProvider.Context ctx) {
-        super(ctx);
-    }
+    // позиція планети у світових координатах
+    public static final double PLANET_X = 0;
+    public static final double PLANET_Y = 200;
+    public static final double PLANET_Z = 0;
+    public static final float PLANET_RADIUS = 30.0f;
 
-    @Override
-    public void render(SphereEntity entity, float yaw, float partialTick,
-                       PoseStack stack, MultiBufferSource source, int light) {
-
+    public static void render(PoseStack poseStack, Matrix4f projectionMatrix, Camera camera) {
         ShaderProgram shader = VeilRenderSystem.setShader(SHADER);
         if (shader == null) return;
 
-        stack.pushPose();
+        // зсуваємо на позицію планети відносно камери
+        double camX = camera.getPosition().x;
+        double camY = camera.getPosition().y;
+        double camZ = camera.getPosition().z;
+
+// рахуємо відносну позицію у double точності
+        double relX = PLANET_X - camX;
+        double relY = PLANET_Y - camY;
+        double relZ = PLANET_Z - camZ;
+
+        poseStack.pushPose();
+        poseStack.translate(relX, relY, relZ);
+
         RenderSystem.disableCull();
+        RenderSystem.enableDepthTest();
 
         Tesselator tesselator = Tesselator.getInstance();
         BufferBuilder buf = tesselator.begin(
                 VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX);
 
-        Matrix4f mat = stack.last().pose();
-        int stacks = 16, slices = 16;
-        float r = 0.5f;
+        Matrix4f mat = poseStack.last().pose();
+        int stacks = 32, slices = 32;
+        float r = PLANET_RADIUS;
 
         for (int i = 0; i < stacks; i++) {
             float phi1 = (float)(Math.PI * i / stacks);
@@ -76,16 +86,10 @@ public class SphereRenderer extends EntityRenderer<SphereEntity> {
             }
         }
 
-        shader.bind();
         BufferUploader.drawWithShader(buf.buildOrThrow());
-        ShaderProgram.unbind();
 
         RenderSystem.enableCull();
-        stack.popPose();
-    }
+        poseStack.popPose();
 
-    @Override
-    public ResourceLocation getTextureLocation(SphereEntity entity) {
-        return ResourceLocation.fromNamespaceAndPath("create_space", "textures/entity/sphere.png");
     }
 }

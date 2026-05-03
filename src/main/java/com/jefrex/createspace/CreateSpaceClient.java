@@ -1,6 +1,6 @@
 package com.jefrex.createspace;
 
-import com.jefrex.createspace.client.renderer.SphereRenderer;
+import com.jefrex.createspace.client.renderer.PlanetRenderer;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -9,6 +9,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
@@ -29,5 +30,20 @@ public class CreateSpaceClient {
     @SubscribeEvent
     static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
 
+    }
+
+    @SubscribeEvent
+    static void onRenderLevel(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
+
+        var mc = net.minecraft.client.Minecraft.getInstance();
+        if (mc.level == null) return;
+        //if (!mc.level.dimension().equals(CreateSpace.SPACE_LEVEL)) return;
+
+        PlanetRenderer.render(
+                event.getPoseStack(),
+                event.getProjectionMatrix(),
+                mc.gameRenderer.getMainCamera()
+        );
     }
 }

@@ -1,0 +1,10 @@
+{
+  "stages": [
+    {
+      "type": "veil:blit",
+      "shader": "create_space:planet",
+      "in": "minecraft:main",
+      "out": "minecraft:main"
+    }
+  ]
+}
