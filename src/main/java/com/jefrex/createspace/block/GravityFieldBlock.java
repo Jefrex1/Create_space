@@ -15,8 +15,8 @@ import java.util.Queue;
 
 public class GravityFieldBlock extends Block {
 
-    private static final int MAX_SPREAD = 20; // максимальна відстань поширення
-    private static final int BLOCKS_PER_TICK = 50; // скільки блоків заповнює за тік
+    private static final int MAX_SPREAD = 20;
+    private static final int BLOCKS_PER_TICK = 50;
 
     public GravityFieldBlock() {
         super(BlockBehaviour.Properties.of()

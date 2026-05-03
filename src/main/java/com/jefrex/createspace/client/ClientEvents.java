@@ -1,4 +1,4 @@
-package com.jefrex.createspace.client; // Перевір, щоб пакет збігався з твоєю структурою папок
+package com.jefrex.createspace.client;
 
 import com.jefrex.createspace.CreateSpace;
 import com.jefrex.createspace.item.ModItems;
@@ -10,7 +10,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
-import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent; // Перевір цей імпорт
+import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import org.jetbrains.annotations.NotNull;
 
 @EventBusSubscriber(modid = CreateSpace.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
