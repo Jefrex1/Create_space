@@ -46,4 +46,5 @@ public class CreateSpaceClient {
                 mc.gameRenderer.getMainCamera()
         );
     }
+
 }

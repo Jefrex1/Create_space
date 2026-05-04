@@ -1,95 +1,106 @@
 package com.jefrex.createspace.client.renderer;
 
-import com.jefrex.createspace.CreateSpace;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import foundry.veil.api.client.render.VeilRenderSystem;
 import foundry.veil.api.client.render.shader.program.ShaderProgram;
 import net.minecraft.client.Camera;
 import net.minecraft.resources.ResourceLocation;
-import org.joml.Matrix4f;
+import org.joml.*;
 
 public class PlanetRenderer {
 
     private static final ResourceLocation SHADER =
             ResourceLocation.fromNamespaceAndPath("create_space", "planet");
 
-    // позиція планети у світових координатах
-    public static final double PLANET_X = 0;
-    public static final double PLANET_Y = 200;
-    public static final double PLANET_Z = 0;
-    public static final float PLANET_RADIUS = 30.0f;
+    public static final double PLANET_X = 30;
+    public static final double PLANET_Y = 100;
+    public static final double PLANET_Z = -52;
+    public static final float PLANET_RADIUS = 500.0f;
+
+    private static float rotation = 0.0f;
 
     public static void render(PoseStack poseStack, Matrix4f projectionMatrix, Camera camera) {
         ShaderProgram shader = VeilRenderSystem.setShader(SHADER);
         if (shader == null) return;
 
-        // зсуваємо на позицію планети відносно камери
-        double camX = camera.getPosition().x;
-        double camY = camera.getPosition().y;
-        double camZ = camera.getPosition().z;
+        rotation += 0.00025f;
 
-// рахуємо відносну позицію у double точності
-        double relX = PLANET_X - camX;
-        double relY = PLANET_Y - camY;
-        double relZ = PLANET_Z - camZ;
+        var camPos = camera.getPosition();
 
-        poseStack.pushPose();
-        poseStack.translate(relX, relY, relZ);
+        Vector3f relativePos = new Vector3f(
+                (float)(PLANET_X - camPos.x),
+                (float)(PLANET_Y - camPos.y),
+                (float)(PLANET_Z - camPos.z)
+        );
+
+        Vector3f lookVector = new Vector3f(camera.getLookVector());
+        Vector3f upVector = new Vector3f(camera.getUpVector());
+        Matrix4f rotationOnlyView = new Matrix4f().setLookAt(
+                0, 0, 0,
+                lookVector.x, lookVector.y, lookVector.z,
+                upVector.x, upVector.y, upVector.z
+        );
+
+        Vector4f spherePosView = new Vector4f(relativePos, 1.0f).mul(rotationOnlyView);
+
+        Matrix4f invProj = new Matrix4f(projectionMatrix).invert();
+        Matrix4f invView = new Matrix4f(rotationOnlyView).invert();
+        Matrix4f planetRotation = new Matrix4f().rotateY(rotation);
+
+        var uSpherePos = shader.getUniform("uSpherePos");
+        if (uSpherePos != null) uSpherePos.setVector(
+                -spherePosView.x,
+                -spherePosView.y,
+                -spherePosView.z
+        );
+
+        var uScale = shader.getUniform("uScale");
+        if (uScale != null) uScale.setFloat(PLANET_RADIUS);
+
+        var uInvProj = shader.getUniform("uInvProj");
+        if (uInvProj != null) uInvProj.setMatrix(invProj);
+
+        var uInvView = shader.getUniform("uInvView");
+        if (uInvView != null) uInvView.setMatrix(invView);
+
+        var uPlanetRotation = shader.getUniform("uPlanetRotation");
+        if (uPlanetRotation != null) uPlanetRotation.setMatrix(planetRotation);
+
+        var uTime = shader.getUniform("uTime");
+        if (uTime != null) uTime.setFloat(rotation * 0.5f);
+
+        RenderSystem.setShaderTexture(1, ResourceLocation.fromNamespaceAndPath("create_space", "textures/planet/clouds.png"));
+
+        var uSpherePosWorld = shader.getUniform("uSpherePosWorld");
+        if (uSpherePosWorld != null) uSpherePosWorld.setVector(
+                relativePos.x,
+                relativePos.y,
+                relativePos.z
+        );
 
         RenderSystem.disableCull();
-        RenderSystem.enableDepthTest();
+        RenderSystem.disableDepthTest();
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
 
         Tesselator tesselator = Tesselator.getInstance();
         BufferBuilder buf = tesselator.begin(
-                VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX);
+                VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
 
-        Matrix4f mat = poseStack.last().pose();
-        int stacks = 32, slices = 32;
-        float r = PLANET_RADIUS;
+        buf.addVertex(-1.0f, -1.0f, 0.0f);
+        buf.addVertex( 1.0f, -1.0f, 0.0f);
+        buf.addVertex( 1.0f,  1.0f, 0.0f);
+        buf.addVertex(-1.0f,  1.0f, 0.0f);
 
-        for (int i = 0; i < stacks; i++) {
-            float phi1 = (float)(Math.PI * i / stacks);
-            float phi2 = (float)(Math.PI * (i + 1) / stacks);
-            for (int j = 0; j < slices; j++) {
-                float theta1 = (float)(2 * Math.PI * j / slices);
-                float theta2 = (float)(2 * Math.PI * (j + 1) / slices);
-
-                float x1 = (float)(r * Math.sin(phi1) * Math.cos(theta1));
-                float y1 = (float)(r * Math.cos(phi1));
-                float z1 = (float)(r * Math.sin(phi1) * Math.sin(theta1));
-
-                float x2 = (float)(r * Math.sin(phi2) * Math.cos(theta1));
-                float y2 = (float)(r * Math.cos(phi2));
-                float z2 = (float)(r * Math.sin(phi2) * Math.sin(theta1));
-
-                float x3 = (float)(r * Math.sin(phi1) * Math.cos(theta2));
-                float y3 = (float)(r * Math.cos(phi1));
-                float z3 = (float)(r * Math.sin(phi1) * Math.sin(theta2));
-
-                float x4 = (float)(r * Math.sin(phi2) * Math.cos(theta2));
-                float y4 = (float)(r * Math.cos(phi2));
-                float z4 = (float)(r * Math.sin(phi2) * Math.sin(theta2));
-
-                float u1 = (float)j / slices;
-                float u2 = (float)(j + 1) / slices;
-                float v1 = (float)i / stacks;
-                float v2 = (float)(i + 1) / stacks;
-
-                buf.addVertex(mat, x1, y1, z1).setUv(u1, v1);
-                buf.addVertex(mat, x2, y2, z2).setUv(u1, v2);
-                buf.addVertex(mat, x3, y3, z3).setUv(u2, v1);
-
-                buf.addVertex(mat, x2, y2, z2).setUv(u1, v2);
-                buf.addVertex(mat, x4, y4, z4).setUv(u2, v2);
-                buf.addVertex(mat, x3, y3, z3).setUv(u2, v1);
-            }
-        }
-
+        shader.bind();
         BufferUploader.drawWithShader(buf.buildOrThrow());
+        ShaderProgram.unbind();
 
-        RenderSystem.enableCull();
-        poseStack.popPose();
-
+        RenderSystem.disableCull();
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthMask(true);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
     }
 }
