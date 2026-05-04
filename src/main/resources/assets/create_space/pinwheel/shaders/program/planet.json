@@ -1,8 +1,8 @@
 {
   "vertex": "create_space:planet",
   "fragment": "create_space:planet",
-  "textures": {
-    "PlanetTexture": "create_space:textures/planet/earth.png",
-    "CloudTexture": "create_space:textures/planet/clouds.png"
-  }
+  "samplers": [
+    { "name": "PlanetTexture" },
+    { "name": "CloudTexture" }
+  ]
 }

@@ -1,0 +1,39 @@
+[
+  {
+    "id": "earth",
+    "x": 30,
+    "y": 100,
+    "z": -52,
+    "radius": 50.0,
+    "texture": "create_space:textures/planet/earth.png",
+    "cloudTexture": "create_space:textures/planet/clouds.png",
+    "cloudSpeed": 0.06,
+    "rotationSpeed": 0.00025,
+    "sun": { "x": 1.0, "y": 0.5, "z": 0.3 }
+  },
+  {
+    "id": "moon",
+    "x": 1000,
+    "y": 100,
+    "z": -52,
+    "radius": 5.0,
+    "texture": "create_space:textures/planet/moon.png",
+    "cloudTexture": null,
+    "cloudSpeed": 0.0,
+    "rotationSpeed": 0.0025,
+    "sun": { "x": 1.0, "y": 0.5, "z": 0.3 }
+  },
+  {
+    "id": "mars",
+    "x": 300,
+    "y": 200,
+    "z": -52,
+    "radius": 30.0,
+    "texture": "create_space:textures/planet/mars.png",
+    "cloudTexture": null,
+    "cloudSpeed": 0.0,
+    "rotationSpeed": 0.002,
+    "sun": { "x": 1.0, "y": 0.5, "z": 0.3 }
+  }
+
+]

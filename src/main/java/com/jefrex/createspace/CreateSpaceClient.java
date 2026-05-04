@@ -1,5 +1,6 @@
 package com.jefrex.createspace;
 
+import com.jefrex.createspace.client.renderer.PlanetRegistry;
 import com.jefrex.createspace.client.renderer.PlanetRenderer;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
@@ -9,6 +10,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
@@ -33,8 +35,13 @@ public class CreateSpaceClient {
     }
 
     @SubscribeEvent
+    static void onRegisterReloadListeners(RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener(new PlanetRegistry());
+    }
+
+    @SubscribeEvent
     static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_SKY) return;
 
         var mc = net.minecraft.client.Minecraft.getInstance();
         if (mc.level == null) return;

@@ -1,0 +1,7 @@
+{
+  "vertex": "create_space:planet",
+  "fragment": "create_space:skybox",
+  "samplers": [
+    { "name": "SkyboxTexture" }
+  ]
+}
