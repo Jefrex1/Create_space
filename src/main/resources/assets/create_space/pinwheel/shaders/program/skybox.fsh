@@ -20,9 +20,9 @@ void main() {
     vec3 dir = normalize((uViewMatrix * vec4(rayView.xyz, 0.0)).xyz);
 
     // 4. Повільне обертання самого космосу (опціонально)
-    float s = sin(uRotation);
-    float c = cos(uRotation);
-    dir.xz *= mat2(c, -s, s, c);
+    //float s = sin(uRotation);
+    //float c = cos(uRotation);
+    //dir.xz *= mat2(c, -s, s, c);
 
     // 5. Проекція на сферу
     float u = fract(atan(dir.z, dir.x) / (2.0 * 3.14159));
