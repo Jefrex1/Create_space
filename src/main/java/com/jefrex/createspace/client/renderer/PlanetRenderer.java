@@ -115,6 +115,11 @@ public class PlanetRenderer {
         setUniformFloat(shader, "uHasClouds", planet.cloudTexture() != null ? 1.0f : 0.0f);
         setUniformFloat(shader, "uCloudSpeed", planet.cloudSpeed());
 
+        setUniformFloat(shader, "uAtmosphereRadius", planet.radius() * 1.16f);
+        setUniformVec3(shader, "uRayleighCoeff", 5.8e-3f, 13.5e-3f, 33.1e-3f);
+        setUniformFloat(shader, "uMieCoeff", 21e-3f);
+        setUniformFloat(shader, "uAtmosphereStrength", planet.atmosphereStrength());
+
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);
         RenderSystem.depthMask(true);

@@ -16,61 +16,172 @@ uniform vec3 uSunDir;
 uniform float uHasClouds;
 uniform float uCloudSpeed;
 
-bool sphere(vec3 offset, vec3 dir, float radius, out float dist) {
+// Атмосфера
+uniform float uAtmosphereRadius;  // зазвичай uScale * 1.025
+uniform vec3  uRayleighCoeff;     // (5.8e-3, 13.5e-3, 33.1e-3) для Землі
+uniform float uMieCoeff;          // 21e-3
+uniform float uAtmosphereStrength;
+
+// ===================== УТИЛІТИ =====================
+
+bool sphereIntersect(vec3 offset, vec3 dir, float radius, out float t1, out float t2) {
     float A = dot(dir, dir);
     float B = dot(offset, dir);
     float C = dot(offset, offset) - radius * radius;
     float disc = B*B - A*C;
-
     if (disc < 0.0) return false;
+    float sq = sqrt(disc);
+    t1 = (-B - sq) / A;
+    t2 = (-B + sq) / A;
+    return true;
+}
 
-    float sqrtDisc = sqrt(disc);
-    float t1 = (-B - sqrtDisc) / A;
-    float t2 = (-B + sqrtDisc) / A;
-
-    if (t1 > 0.0) {
-        dist = t1;
-        return true;
-    } else if (t2 > 0.0) {
-        dist = t2;
-        return true;
-    }
+bool sphereHit(vec3 offset, vec3 dir, float radius, out float dist) {
+    float t1, t2;
+    if (!sphereIntersect(offset, dir, radius, t1, t2)) return false;
+    if (t1 > 0.0) { dist = t1; return true; }
+    if (t2 > 0.0) { dist = t2; return true; }
     return false;
 }
 
+// ===================== АТМОСФЕРА =====================
+
+// Скільки атмосфери проходить промінь від точки rayPos у напрямку rayDir
+float opticalDepth(vec3 rayPos, vec3 rayDir, float rayLen) {
+    int steps = 8;
+    float stepSize = rayLen / float(steps);
+    float depth = 0.0;
+    vec3 pos = rayPos + rayDir * stepSize * 0.5;
+    for (int i = 0; i < steps; i++) {
+        float height = length(pos - uSpherePosWorld) - uScale;
+        float h = max(0.0, height);
+        // Експоненційна щільність атмосфери
+        depth += exp(-h / (uAtmosphereRadius - uScale) * 8.0) * stepSize;
+        pos += rayDir * stepSize;
+    }
+    return depth;
+}
+
+vec3 rayleighScatter(vec3 rayOrigin, vec3 rayDir, float rayLen, vec3 hitPoint) {
+    int steps = 16;
+    float stepSize = rayLen / float(steps);
+
+    vec3 scatteredLight = vec3(0.0);
+    float viewDepth = 0.0;
+
+    vec3 pos = rayOrigin + rayDir * stepSize * 0.5;
+    vec3 sunDir = normalize(uSunDir);
+
+    for (int i = 0; i < steps; i++) {
+        float height = length(pos - uSpherePosWorld) - uScale;
+        float h = max(0.0, height);
+        float density = exp(-h / (uAtmosphereRadius - uScale) * 8.0);
+
+        // Перевіряємо чи сонце освітлює цю точку (не за планетою)
+        float shadowT1, shadowT2;
+        bool blockedByPlanet = sphereIntersect(
+            pos - uSpherePosWorld, sunDir, uScale, shadowT1, shadowT2
+        ) && shadowT2 > 0.0;
+
+        float sunVisibility = blockedByPlanet ? 0.0 : 1.0;
+
+        // М'який перехід на термінаторі
+        float sunAngle = dot(normalize(pos - uSpherePosWorld), sunDir);
+        float terminator = smoothstep(-0.1, 0.1, sunAngle);
+        sunVisibility *= terminator;
+
+        float t1, t2;
+        float sunRayLen = 0.0;
+        if (sphereIntersect(pos - uSpherePosWorld, sunDir, uAtmosphereRadius, t1, t2)) {
+            sunRayLen = max(t1, t2);
+        }
+        float sunDepth = opticalDepth(pos, sunDir, sunRayLen);
+
+        viewDepth += density * stepSize;
+
+        vec3 transmittance = exp(-(uRayleighCoeff * (viewDepth + sunDepth)));
+        scatteredLight += density * transmittance * uRayleighCoeff * stepSize * sunVisibility;
+
+        pos += rayDir * stepSize;
+    }
+
+    float cosAngle = dot(rayDir, sunDir);
+    float phase = 0.75 * (1.0 + cosAngle * cosAngle);
+
+    return scatteredLight * phase * uAtmosphereStrength;
+}
+
+// ===================== MAIN =====================
+
 void main() {
     vec4 rayClip = vec4(texCoord.x, texCoord.y, -1.0, 1.0);
-    vec4 rayView = uInvProj * rayClip;
+    vec4 rayView  = uInvProj * rayClip;
     vec3 dir = normalize(rayView.xyz);
 
-    float dist;
-    if (!sphere(uSpherePos, dir, uScale, dist)) {
-        discard;
+    float atmDist;
+    bool hitsAtm = sphereHit(uSpherePos, dir, uAtmosphereRadius, atmDist);
+
+    float planetDist;
+    bool hitsPlanet = sphereHit(uSpherePos, dir, uScale, planetDist);
+
+    if (!hitsAtm && !hitsPlanet) discard;
+
+    // ---- Рендер планети ----
+    vec3 planetColor = vec3(0.0);
+    if (hitsPlanet) {
+        vec3 hitPointView  = dir * planetDist;
+
+        mat4 proj = inverse(uInvProj);
+        vec4 clipPos = proj * vec4(hitPointView, 1.0);
+        gl_FragDepth = (clipPos.z / clipPos.w) * 0.5 + 0.5;
+
+        vec3 hitPointWorld = (uInvView * vec4(hitPointView, 1.0)).xyz;
+        vec3 normal = normalize(hitPointWorld - uSpherePosWorld);
+        vec3 rotatedNormal = normalize((uPlanetRotation * vec4(normal, 0.0)).xyz);
+
+        float u = fract(atan(rotatedNormal.z, rotatedNormal.x) / (2.0 * 3.14159));
+        float v = acos(clamp(rotatedNormal.y, -1.0, 1.0)) / 3.14159;
+
+        planetColor = texture(PlanetTexture, vec2(u, v)).rgb;
+
+        if (uHasClouds > 0.5) {
+            float cloudU = fract(u + uTime * uCloudSpeed);
+            vec4 cloud = texture(CloudTexture, vec2(cloudU, v));
+            planetColor = mix(planetColor, cloud.rgb, cloud.a);
+        }
+
+        float light = max(0.05, dot(normal, normalize(uSunDir)));
+        planetColor *= light;
+    } else {
+        // Промінь не потрапив у планету — тільки атмосфера
+        gl_FragDepth = 1.0;
     }
 
-    vec3 hitPointView = dir * dist;
+    // ---- Атмосферне розсіювання ----
+    vec3 atmColor = vec3(0.0);
+    if (hitsAtm) {
+        float t1, t2;
+        sphereIntersect(uSpherePos, dir, uAtmosphereRadius, t1, t2);
 
-    mat4 proj = inverse(uInvProj);
-    vec4 clipPos = proj * vec4(hitPointView, 1.0);
-    gl_FragDepth = (clipPos.z / clipPos.w) * 0.5 + 0.5;
+        float atmStart = max(0.0, t1);  // камера може бути всередині
+        float atmEnd   = hitsPlanet ? planetDist : max(0.0, t2);
+        float atmLen   = max(0.0, atmEnd - atmStart);
 
-    vec3 hitPointWorld = (uInvView * vec4(hitPointView, 1.0)).xyz;
-    vec3 normal = normalize(hitPointWorld - uSpherePosWorld);
-    vec3 rotatedNormal = normalize((uPlanetRotation * vec4(normal, 0.0)).xyz);
+        if (atmLen > 0.0) {
+            vec3 startWorld = (uInvView * vec4(dir * atmStart, 1.0)).xyz;
+            vec3 dirWorld   = normalize((uInvView * vec4(dir, 0.0)).xyz);
 
-    float u = fract(atan(rotatedNormal.z, rotatedNormal.x) / (2.0 * 3.14159));
-    float v = acos(clamp(rotatedNormal.y, -1.0, 1.0)) / 3.14159;
-
-    vec3 color = texture(PlanetTexture, vec2(u, v)).rgb;
-
-    if (uHasClouds > 0.5) {
-        float cloudU = fract(u + uTime * uCloudSpeed);
-        vec4 cloud = texture(CloudTexture, vec2(cloudU, v));
-        color = mix(color, cloud.rgb, cloud.a);
+            atmColor = rayleighScatter(startWorld, dirWorld, atmLen, startWorld);
+        }
     }
 
-    float light = max(0.15, dot(normal, normalize(uSunDir)));
-    color *= light;
+    // ---- Змішування ----
+    float atmAlpha = clamp(length(atmColor), 0.0, 1.0);
+    vec3 finalColor = planetColor + atmColor;
 
-    fragColor = vec4(color, 1.0);
+    if (!hitsPlanet && hitsAtm) {
+        fragColor = vec4(atmColor, atmAlpha);
+    } else {
+        fragColor = vec4(finalColor, 1.0);
+    }
 }

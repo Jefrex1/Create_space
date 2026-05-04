@@ -9,7 +9,8 @@
     "cloudTexture": "create_space:textures/planet/clouds.png",
     "cloudSpeed": 0.06,
     "rotationSpeed": 0.00025,
-    "sun": { "x": 1.0, "y": 0.5, "z": 0.3 }
+    "atmosphereStrength": 5.0,
+    "sun": { "x": 1.0, "y": 0.0, "z": 0.3 }
   },
   {
     "id": "moon",
