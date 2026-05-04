@@ -18,12 +18,60 @@ import java.util.Map;
 public class PlanetRenderer {
 
     private static final ResourceLocation SHADER = ResourceLocation.fromNamespaceAndPath("create_space", "planet");
+    private static final ResourceLocation SKY_SHADER = ResourceLocation.fromNamespaceAndPath("create_space", "skybox");
+    private static final ResourceLocation SKY_TEXTURE = ResourceLocation.fromNamespaceAndPath("create_space", "textures/sky/space_sky.png");
+
     private static final Map<String, Float> rotations = new HashMap<>();
 
     public static void render(PoseStack poseStack, Matrix4f projectionMatrix, Camera camera) {
+        // 1. Рендеримо скайбокс на фоні
+        renderSkybox(projectionMatrix, camera);
+
+        // 2. Рендеримо планети поверх неба
         for (PlanetConfig planet : PlanetRegistry.getPlanets()) {
             renderPlanet(planet, projectionMatrix, camera);
         }
+    }
+
+    private static void renderSkybox(Matrix4f projectionMatrix, Camera camera) {
+        ShaderProgram shader = VeilRenderSystem.setShader(SKY_SHADER);
+        if (shader == null) return;
+
+        // Інвертуємо проекцію для променів
+        Matrix4f invProj = new Matrix4f(projectionMatrix).invert();
+
+        // Отримуємо чисте обертання камери через кватерніон
+        // Це змусить небо повертатися, коли ти крутиш мишкою
+        Matrix4f viewMatrix = new Matrix4f().rotation(camera.rotation());
+
+        setUniformMat4(shader, "uInvProj", invProj);
+        setUniformMat4(shader, "uViewMatrix", viewMatrix); // Передаємо матрицю обертання
+        setUniformFloat(shader, "uRotation", (System.currentTimeMillis() % 360000) / 20000.0f);
+        setUniformInt(shader, "SkyboxTexture", 0);
+
+        RenderSystem.disableDepthTest();
+        RenderSystem.depthMask(false);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+
+        Tesselator tesselator = Tesselator.getInstance();
+        BufferBuilder buf = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
+        // Квад на весь екран
+        buf.addVertex(-1.0f, -1.0f, 1.0f);
+        buf.addVertex( 1.0f, -1.0f, 1.0f);
+        buf.addVertex( 1.0f,  1.0f, 1.0f);
+        buf.addVertex(-1.0f,  1.0f, 1.0f);
+
+        shader.bind();
+        TextureManager tm = Minecraft.getInstance().getTextureManager();
+        GlStateManager._activeTexture(GL13.GL_TEXTURE0);
+        GlStateManager._bindTexture(tm.getTexture(SKY_TEXTURE).getId());
+
+        BufferUploader.drawWithShader(buf.buildOrThrow());
+        ShaderProgram.unbind();
+
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthMask(true);
     }
 
     private static void renderPlanet(PlanetConfig planet, Matrix4f projectionMatrix, Camera camera) {
@@ -67,7 +115,6 @@ public class PlanetRenderer {
         setUniformFloat(shader, "uHasClouds", planet.cloudTexture() != null ? 1.0f : 0.0f);
         setUniformFloat(shader, "uCloudSpeed", planet.cloudSpeed());
 
-        // ВАЖЛИВО: Стани для перекриття блоками
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);
         RenderSystem.depthMask(true);
@@ -75,7 +122,6 @@ public class PlanetRenderer {
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableCull();
 
-        // Малюємо квад дуже далеко (на фоні), але шейдер gl_FragDepth виправить це для кожної точки
         float zDepth = 1.0f;
         Tesselator tesselator = Tesselator.getInstance();
         BufferBuilder buf = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
