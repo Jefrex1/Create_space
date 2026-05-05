@@ -12,7 +12,9 @@ import net.minecraft.resources.ResourceLocation;
 import org.joml.*;
 import org.lwjgl.opengl.GL13;
 
+import java.lang.Math;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class PlanetRenderer {
@@ -25,7 +27,18 @@ public class PlanetRenderer {
 
     public static void render(PoseStack poseStack, Matrix4f projectionMatrix, Camera camera) {
         renderSkybox(projectionMatrix, camera);
-        for (PlanetConfig planet : PlanetRegistry.getPlanets()) {
+
+        var camPos = camera.getPosition();
+
+        List<PlanetConfig> sorted = PlanetRegistry.getPlanets().stream()
+                .sorted((a, b) -> {
+                    double da = Math.pow(a.x() - camPos.x, 2) + Math.pow(a.y() - camPos.y, 2) + Math.pow(a.z() - camPos.z, 2);
+                    double db = Math.pow(b.x() - camPos.x, 2) + Math.pow(b.y() - camPos.y, 2) + Math.pow(b.z() - camPos.z, 2);
+                    return Double.compare(db, da);
+                })
+                .toList();
+
+        for (PlanetConfig planet : sorted) {
             renderPlanet(planet, projectionMatrix, camera);
         }
     }
@@ -124,6 +137,10 @@ public class PlanetRenderer {
 
         setUniformFloat(shader, "uIsStar", planet.isStar() ? 1.0f : 0.0f);
         setUniformVec3(shader, "uStarColor", 1.0f, 0.9f, 0.6f);
+
+        setUniformFloat(shader, "uPlasmaSpeed",      0.3f);
+        setUniformFloat(shader, "uPlasmaScale",      3.0f);
+        setUniformFloat(shader, "uCoronalIntensity", 1.5f);
 
         float atmRadius = planet.isStar()
                 ? planet.radius() * 6.0f
