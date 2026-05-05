@@ -119,6 +119,7 @@ public class PlanetRenderer {
         setUniformMat4(shader, "uInvView", invView);
         setUniformMat4(shader, "uPlanetRotation", planetRotation);
         setUniformFloat(shader, "uTime", rotation * 0.5f);
+        setUniformFloat(shader, "uPlasmaTime", (System.currentTimeMillis() % 1000000) / 1000.0f);
         setUniformVec3(shader, "uSpherePosWorld", relativePos.x, relativePos.y, relativePos.z);
 
         // Автоматичний напрямок на сонце

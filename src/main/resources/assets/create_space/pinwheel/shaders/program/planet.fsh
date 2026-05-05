@@ -25,6 +25,7 @@ uniform float uAtmosphereStrength;
 // Сонце (НОВЕ)
 uniform float uIsStar;
 uniform vec3  uStarColor;
+uniform float uPlasmaTime;
 
 // ===================== УТИЛІТИ =====================
 
@@ -50,23 +51,61 @@ bool sphereHit(vec3 offset, vec3 dir, float radius, out float dist) {
 
 // ===================== GLOW =====================
 
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+        mix(hash(i), hash(i + vec2(1,0)), f.x),
+        mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), f.x),
+        f.y
+    );
+}
+
+float fbm(vec2 p) {
+    float v = 0.0;
+    float a = 0.5;
+    for (int i = 0; i < 4; i++) {
+        v += a * noise(p);
+        p = p * 2.1 + vec2(1.7, 9.2);
+        a *= 0.5;
+    }
+    return v;
+}
+
 vec4 starGlow(vec3 dir) {
     vec3 toSun = normalize(-uSpherePos);
     float cosA = dot(dir, toSun);
     float angle = acos(clamp(cosA, -1.0, 1.0));
     float sunAngularRadius = atan(uScale / length(uSpherePos));
     float edgeDist = max(0.0, angle - sunAngularRadius);
-
     float normalizedDist = edgeDist / sunAngularRadius;
 
-    float glow1 = exp(-normalizedDist * 3.0) * 1.2;
-    float glow2 = exp(-normalizedDist * 1.0) * 0.4;
-    float glow3 = exp(-normalizedDist * 0.3) * 0.1;
+    vec3 dirWorld = normalize((uInvView * vec4(dir, 0.0)).xyz);
+    vec3 normDir = normalize(dirWorld);
+    vec2 staticCoords = vec2(atan(normDir.z, normDir.x), acos(normDir.y));
+    vec2 noiseCoord = staticCoords * 2.5 + vec2(uPlasmaTime * 0.15, uPlasmaTime * 0.09);
+
+    float plasma = fbm(noiseCoord) * 0.5 + fbm(noiseCoord * 1.7 + vec2(uPlasmaTime * 0.07)) * 0.3;
+
+    float deformed = normalizedDist - plasma * 0.5 * exp(-normalizedDist * 2.0);
+
+    float glow1 = exp(-deformed * 30.0) * 0.2;
+    float glow2 = exp(-deformed * 3.5) * 0.8;
+    float glow3 = exp(-deformed * 0.7) * 0.2;
     float totalGlow = glow1 + glow2 + glow3;
+
+    float prominence = exp(-deformed * 3.0) * plasma * 4.0;
+    vec3 prominenceColor = vec3(1.0, 0.3, 0.05) * prominence;
 
     vec3 innerColor = uStarColor * 2.0;
     vec3 outerColor = uStarColor * vec3(1.0, 0.5, 0.1);
-    vec3 glowColor  = mix(outerColor, innerColor, clamp(glow1, 0.0, 1.90));
+    vec3 glowColor  = mix(outerColor, innerColor, clamp(glow1, 0.0, 1.0));
+    glowColor += prominenceColor;
 
     return vec4(glowColor * totalGlow, clamp(totalGlow, 0.0, 1.0));
 }
@@ -164,7 +203,10 @@ void main() {
             float v = acos(clamp(rotatedNormal.y, -1.0, 1.0)) / 3.14159;
             vec3 starSurface = texture(PlanetTexture, vec2(u, v)).rgb * uStarColor * 2.0;
             vec4 glow = starGlow(dir);
-            fragColor = vec4(starSurface + glow.rgb * 0.5, 1.0);
+            float distFromCenter = length(dir.xy - normalize(-uSpherePos).xy);
+            float centerBrightness = 1.0 - exp(-distFromCenter * 3.0) * 0.7;
+
+            fragColor = vec4(starSurface * centerBrightness + glow.rgb * 0.01, 1.0);
         } else {
             gl_FragDepth = 1.0;
             vec4 glow = starGlow(dir);
