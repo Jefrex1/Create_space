@@ -12,7 +12,8 @@ public record PlanetConfig(
         float rotationSpeed,
         float atmosphereStrength,
         boolean isStar,
-        SunConfig sun
+        SunConfig sun,
+        String dimension
 ) {
     public record SunConfig(float x, float y, float z) {}
 
@@ -27,7 +28,8 @@ public record PlanetConfig(
                 c.rotationSpeed() > 0 ? c.rotationSpeed() : 0.00025f,
                 c.atmosphereStrength() >= 0 ? c.atmosphereStrength() : 1.0f,
                 c.isStar(),
-                c.sun() != null ? c.sun() : new SunConfig(1.0f, 0.5f, 0.3f)
+                c.sun() != null ? c.sun() : new SunConfig(1.0f, 0.5f, 0.3f),
+                c.dimension()
         );
     }
 }

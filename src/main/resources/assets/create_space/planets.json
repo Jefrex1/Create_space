@@ -9,7 +9,8 @@
     "cloudTexture": "create_space:textures/planet/clouds.png",
     "cloudSpeed": 0.10,
     "rotationSpeed": 0.00025,
-    "atmosphereStrength": 5.0
+    "atmosphereStrength": 5.0,
+    "dimension": "minecraft:overworld"
   },
   {
     "id": "moon",

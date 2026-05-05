@@ -45,7 +45,7 @@ public class CreateSpaceClient {
 
         var mc = net.minecraft.client.Minecraft.getInstance();
         if (mc.level == null) return;
-        //if (!mc.level.dimension().equals(CreateSpace.SPACE_LEVEL)) return;
+        if (!mc.level.dimension().equals(CreateSpace.SPACE_LEVEL)) return;
 
         PlanetRenderer.render(
                 event.getPoseStack(),
