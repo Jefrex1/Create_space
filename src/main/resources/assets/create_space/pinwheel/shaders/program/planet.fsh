@@ -88,11 +88,11 @@ vec4 starGlow(vec3 dir) {
     vec3 dirWorld = normalize((uInvView * vec4(dir, 0.0)).xyz);
     vec3 normDir = normalize(dirWorld);
     vec2 staticCoords = vec2(atan(normDir.z, normDir.x), acos(normDir.y));
-    vec2 noiseCoord = staticCoords * 2.5 + vec2(uPlasmaTime * 0.15, uPlasmaTime * 0.09);
+    vec2 noiseCoord = staticCoords * 2.5 + vec2(uPlasmaTime * 0.05, uPlasmaTime * 0.02);
 
-    float plasma = fbm(noiseCoord) * 0.5 + fbm(noiseCoord * 1.7 + vec2(uPlasmaTime * 0.07)) * 0.3;
+    float plasma = fbm(noiseCoord) * 0.5 + fbm(noiseCoord * 1.7 + vec2(uPlasmaTime * 0.03)) * 0.3;
 
-    float deformed = normalizedDist - plasma * 0.5 * exp(-normalizedDist * 2.0);
+    float deformed = normalizedDist - plasma * 0.66 * exp(-normalizedDist * 2.0);
 
     float glow1 = exp(-deformed * 30.0) * 0.2;
     float glow2 = exp(-deformed * 3.5) * 0.8;
