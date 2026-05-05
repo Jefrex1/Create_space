@@ -237,7 +237,7 @@ void main() {
         planetColor = texture(PlanetTexture, vec2(u, v)).rgb;
 
         if (uHasClouds > 0.5) {
-            float cloudU = fract(u + uTime * uCloudSpeed);
+            float cloudU = fract(u - uTime * uCloudSpeed);
             vec4 cloud = texture(CloudTexture, vec2(cloudU, v));
             planetColor = mix(planetColor, cloud.rgb, cloud.a);
         }
