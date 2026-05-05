@@ -24,28 +24,29 @@ public class PlanetRenderer {
     private static final Map<String, Float> rotations = new HashMap<>();
 
     public static void render(PoseStack poseStack, Matrix4f projectionMatrix, Camera camera) {
-        // 1. Рендеримо скайбокс на фоні
         renderSkybox(projectionMatrix, camera);
-
-        // 2. Рендеримо планети поверх неба
         for (PlanetConfig planet : PlanetRegistry.getPlanets()) {
             renderPlanet(planet, projectionMatrix, camera);
         }
+    }
+
+    private static Vector3f getSunPosition() {
+        return PlanetRegistry.getPlanets().stream()
+                .filter(PlanetConfig::isStar)
+                .findFirst()
+                .map(s -> new Vector3f((float)s.x(), (float)s.y(), (float)s.z()))
+                .orElse(null);
     }
 
     private static void renderSkybox(Matrix4f projectionMatrix, Camera camera) {
         ShaderProgram shader = VeilRenderSystem.setShader(SKY_SHADER);
         if (shader == null) return;
 
-        // Інвертуємо проекцію для променів
         Matrix4f invProj = new Matrix4f(projectionMatrix).invert();
-
-        // Отримуємо чисте обертання камери через кватерніон
-        // Це змусить небо повертатися, коли ти крутиш мишкою
         Matrix4f viewMatrix = new Matrix4f().rotation(camera.rotation());
 
         setUniformMat4(shader, "uInvProj", invProj);
-        setUniformMat4(shader, "uViewMatrix", viewMatrix); // Передаємо матрицю обертання
+        setUniformMat4(shader, "uViewMatrix", viewMatrix);
         setUniformFloat(shader, "uRotation", (System.currentTimeMillis() % 360000) / 20000.0f);
         setUniformInt(shader, "SkyboxTexture", 0);
 
@@ -56,7 +57,6 @@ public class PlanetRenderer {
 
         Tesselator tesselator = Tesselator.getInstance();
         BufferBuilder buf = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
-        // Квад на весь екран
         buf.addVertex(-1.0f, -1.0f, 1.0f);
         buf.addVertex( 1.0f, -1.0f, 1.0f);
         buf.addVertex( 1.0f,  1.0f, 1.0f);
@@ -108,14 +108,27 @@ public class PlanetRenderer {
         setUniformFloat(shader, "uTime", rotation * 0.5f);
         setUniformVec3(shader, "uSpherePosWorld", relativePos.x, relativePos.y, relativePos.z);
 
-        PlanetConfig.SunConfig sun = planet.sun();
-        Vector3f sunDir = new Vector3f(sun.x(), sun.y(), sun.z()).normalize();
+        // Автоматичний напрямок на сонце
+        Vector3f sunPos = getSunPosition();
+        Vector3f sunDir = sunPos != null
+                ? new Vector3f(
+                (float)(sunPos.x - planet.x()),
+                (float)(sunPos.y - planet.y()),
+                (float)(sunPos.z - planet.z())
+        ).normalize()
+                : new Vector3f(planet.sun().x(), planet.sun().y(), planet.sun().z()).normalize();
         setUniformVec3(shader, "uSunDir", sunDir.x, sunDir.y, sunDir.z);
 
         setUniformFloat(shader, "uHasClouds", planet.cloudTexture() != null ? 1.0f : 0.0f);
         setUniformFloat(shader, "uCloudSpeed", planet.cloudSpeed());
 
-        setUniformFloat(shader, "uAtmosphereRadius", planet.radius() * 1.16f);
+        setUniformFloat(shader, "uIsStar", planet.isStar() ? 1.0f : 0.0f);
+        setUniformVec3(shader, "uStarColor", 1.0f, 0.9f, 0.6f);
+
+        float atmRadius = planet.isStar()
+                ? planet.radius() * 6.0f
+                : planet.radius() * 1.06f;
+        setUniformFloat(shader, "uAtmosphereRadius", atmRadius);
         setUniformVec3(shader, "uRayleighCoeff", 5.8e-3f, 13.5e-3f, 33.1e-3f);
         setUniformFloat(shader, "uMieCoeff", 21e-3f);
         setUniformFloat(shader, "uAtmosphereStrength", planet.atmosphereStrength());

@@ -17,10 +17,14 @@ uniform float uHasClouds;
 uniform float uCloudSpeed;
 
 // Атмосфера
-uniform float uAtmosphereRadius;  // зазвичай uScale * 1.025
-uniform vec3  uRayleighCoeff;     // (5.8e-3, 13.5e-3, 33.1e-3) для Землі
-uniform float uMieCoeff;          // 21e-3
+uniform float uAtmosphereRadius;
+uniform vec3  uRayleighCoeff;
+uniform float uMieCoeff;
 uniform float uAtmosphereStrength;
+
+// Сонце (НОВЕ)
+uniform float uIsStar;
+uniform vec3  uStarColor;
 
 // ===================== УТИЛІТИ =====================
 
@@ -44,9 +48,31 @@ bool sphereHit(vec3 offset, vec3 dir, float radius, out float dist) {
     return false;
 }
 
+// ===================== GLOW =====================
+
+vec4 starGlow(vec3 dir) {
+    vec3 toSun = normalize(-uSpherePos);
+    float cosA = dot(dir, toSun);
+    float angle = acos(clamp(cosA, -1.0, 1.0));
+    float sunAngularRadius = atan(uScale / length(uSpherePos));
+    float edgeDist = max(0.0, angle - sunAngularRadius);
+
+    float normalizedDist = edgeDist / sunAngularRadius;
+
+    float glow1 = exp(-normalizedDist * 3.0) * 1.2;
+    float glow2 = exp(-normalizedDist * 1.0) * 0.4;
+    float glow3 = exp(-normalizedDist * 0.3) * 0.1;
+    float totalGlow = glow1 + glow2 + glow3;
+
+    vec3 innerColor = uStarColor * 2.0;
+    vec3 outerColor = uStarColor * vec3(1.0, 0.5, 0.1);
+    vec3 glowColor  = mix(outerColor, innerColor, clamp(glow1, 0.0, 1.90));
+
+    return vec4(glowColor * totalGlow, clamp(totalGlow, 0.0, 1.0));
+}
+
 // ===================== АТМОСФЕРА =====================
 
-// Скільки атмосфери проходить промінь від точки rayPos у напрямку rayDir
 float opticalDepth(vec3 rayPos, vec3 rayDir, float rayLen) {
     int steps = 8;
     float stepSize = rayLen / float(steps);
@@ -55,7 +81,6 @@ float opticalDepth(vec3 rayPos, vec3 rayDir, float rayLen) {
     for (int i = 0; i < steps; i++) {
         float height = length(pos - uSpherePosWorld) - uScale;
         float h = max(0.0, height);
-        // Експоненційна щільність атмосфери
         depth += exp(-h / (uAtmosphereRadius - uScale) * 8.0) * stepSize;
         pos += rayDir * stepSize;
     }
@@ -77,7 +102,6 @@ vec3 rayleighScatter(vec3 rayOrigin, vec3 rayDir, float rayLen, vec3 hitPoint) {
         float h = max(0.0, height);
         float density = exp(-h / (uAtmosphereRadius - uScale) * 8.0);
 
-        // Перевіряємо чи сонце освітлює цю точку (не за планетою)
         float shadowT1, shadowT2;
         bool blockedByPlanet = sphereIntersect(
             pos - uSpherePosWorld, sunDir, uScale, shadowT1, shadowT2
@@ -85,7 +109,6 @@ vec3 rayleighScatter(vec3 rayOrigin, vec3 rayDir, float rayLen, vec3 hitPoint) {
 
         float sunVisibility = blockedByPlanet ? 0.0 : 1.0;
 
-        // М'який перехід на термінаторі
         float sunAngle = dot(normalize(pos - uSpherePosWorld), sunDir);
         float terminator = smoothstep(-0.1, 0.1, sunAngle);
         sunVisibility *= terminator;
@@ -124,6 +147,33 @@ void main() {
     float planetDist;
     bool hitsPlanet = sphereHit(uSpherePos, dir, uScale, planetDist);
 
+    // ---- Якщо це зірка (НОВЕ) ----
+    if (uIsStar > 0.5) {
+        if (!hitsPlanet && !hitsAtm) discard;
+
+        if (hitsPlanet) {
+            vec3 hitPointView = dir * planetDist;
+            mat4 proj = inverse(uInvProj);
+            vec4 clipPos = proj * vec4(hitPointView, 1.0);
+            gl_FragDepth = (clipPos.z / clipPos.w) * 0.5 + 0.5;
+
+            vec3 hitPointWorld = (uInvView * vec4(hitPointView, 1.0)).xyz;
+            vec3 normal = normalize(hitPointWorld - uSpherePosWorld);
+            vec3 rotatedNormal = normalize((uPlanetRotation * vec4(normal, 0.0)).xyz);
+            float u = fract(atan(rotatedNormal.z, rotatedNormal.x) / (2.0 * 3.14159));
+            float v = acos(clamp(rotatedNormal.y, -1.0, 1.0)) / 3.14159;
+            vec3 starSurface = texture(PlanetTexture, vec2(u, v)).rgb * uStarColor * 2.0;
+            vec4 glow = starGlow(dir);
+            fragColor = vec4(starSurface + glow.rgb * 0.5, 1.0);
+        } else {
+            gl_FragDepth = 1.0;
+            vec4 glow = starGlow(dir);
+            if (glow.a < 0.001) discard;
+            fragColor = glow;
+        }
+        return;
+    }
+
     if (!hitsAtm && !hitsPlanet) discard;
 
     // ---- Рендер планети ----
@@ -153,7 +203,6 @@ void main() {
         float light = max(0.05, dot(normal, normalize(uSunDir)));
         planetColor *= light;
     } else {
-        // Промінь не потрапив у планету — тільки атмосфера
         gl_FragDepth = 1.0;
     }
 
@@ -163,14 +212,13 @@ void main() {
         float t1, t2;
         sphereIntersect(uSpherePos, dir, uAtmosphereRadius, t1, t2);
 
-        float atmStart = max(0.0, t1);  // камера може бути всередині
+        float atmStart = max(0.0, t1);
         float atmEnd   = hitsPlanet ? planetDist : max(0.0, t2);
         float atmLen   = max(0.0, atmEnd - atmStart);
 
         if (atmLen > 0.0) {
             vec3 startWorld = (uInvView * vec4(dir * atmStart, 1.0)).xyz;
             vec3 dirWorld   = normalize((uInvView * vec4(dir, 0.0)).xyz);
-
             atmColor = rayleighScatter(startWorld, dirWorld, atmLen, startWorld);
         }
     }
