@@ -7,7 +7,7 @@
     "radius": 50.0,
     "texture": "create_space:textures/planet/earth.png",
     "cloudTexture": "create_space:textures/planet/clouds.png",
-    "cloudSpeed": 0.06,
+    "cloudSpeed": 0.10,
     "rotationSpeed": 0.00025,
     "atmosphereStrength": 5.0
   },
