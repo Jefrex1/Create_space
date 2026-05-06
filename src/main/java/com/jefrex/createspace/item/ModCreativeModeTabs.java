@@ -21,6 +21,7 @@ public class ModCreativeModeTabs {
                     .displayItems((itemDisplayParameters, output) -> {
                         output.accept(ModItems.AIRGUN);
                         output.accept(ModBlocks.GRAVITY_FIELD);
+                        output.accept(ModBlocks.AIR_FIELD);
                     }).build());
 
     public static void register(IEventBus eventBus) {

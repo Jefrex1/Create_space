@@ -21,6 +21,15 @@ public class ModBlocks {
     public static final DeferredItem<BlockItem> GRAVITY_FIELD_ITEM =
             ITEMS.registerSimpleBlockItem("gravity_field", GRAVITY_FIELD);
 
+    public static final DeferredBlock<Block> AIR_FIELD =
+            BLOCKS.register("air_field", AirFieldBlock::new);
+
+    public static final DeferredBlock<Block> AIR_FIELD_AIR =
+            BLOCKS.register("air_field_air", AirFieldAirBlock::new);
+
+    public static final DeferredItem<BlockItem> AIR_FIELD_ITEM =
+            ITEMS.registerSimpleBlockItem("air_field", AIR_FIELD);
+
     public static void register(IEventBus eventBus) {
         BLOCKS.register(eventBus);
         ITEMS.register(eventBus);
