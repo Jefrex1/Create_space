@@ -97,7 +97,7 @@ public class AirGun extends Item {
 
     @Override
     public int getBarColor(ItemStack stack) {
-        return 0x00AAFF;
+        return 0xFFFFFF;
     }
 
     public static void setCharge(ItemStack stack, int value) {
