@@ -1,5 +1,6 @@
 package com.jefrex.createspace.item.custom;
 
+import com.jefrex.createspace.network.AirGunShootPayload;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.sounds.SoundEvents;
@@ -22,6 +23,7 @@ public class AirGun extends Item {
     public static final int MAX_CHARGES = 3;
     private static final String TAG_CHARGE = "air_gun_charge";
     private static final int COOLDOWN_TICKS = 10;
+
     public static ItemStack getAirGunStack(Player player) {
         if (player.getMainHandItem().getItem() instanceof AirGun)
             return player.getMainHandItem();
@@ -34,12 +36,10 @@ public class AirGun extends Item {
         super(properties);
     }
 
-    // ПКМ — додає 1 заряд
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
 
-        // Перевіряємо КД
         if (player.getCooldowns().isOnCooldown(stack.getItem())) {
             return InteractionResultHolder.fail(stack);
         }
@@ -67,22 +67,31 @@ public class AirGun extends Item {
         Vec3 lookAngle = player.getLookAngle();
         double power = 0.15 * charge;
 
-        player.setDeltaMovement(
-                -lookAngle.x * power,
-                -lookAngle.y * power,
-                -lookAngle.z * power
-        );
+        double pushX = -lookAngle.x * power;
+        double pushY = -lookAngle.y * power;
+        double pushZ = -lookAngle.z * power;
+
+        player.setDeltaMovement(player.getDeltaMovement().add(pushX, pushY, pushZ));
         player.hurtMarked = true;
+
+        var data = player.getPersistentData();
+
+        if (data.contains("space_vx")) {
+            data.putDouble("space_vx", data.getDouble("space_vx") + pushX);
+            data.putDouble("space_vy", data.getDouble("space_vy") + pushY);
+            data.putDouble("space_vz", data.getDouble("space_vz") + pushZ);
+        } else {
+            data.putDouble("space_vx", pushX);
+            data.putDouble("space_vy", pushY);
+            data.putDouble("space_vz", pushZ);
+        }
+
+        data.putBoolean("space_was_on_ground", false);
+        data.putLong("space_shot_tick", level.getGameTime());
 
         level.playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.WIND_CHARGE_BURST, SoundSource.PLAYERS,
                 0.5F, 0.4F / (level.getRandom().nextFloat() * 0.4F + 0.8F));
-
-        var data = player.getPersistentData();
-        data.putDouble("space_vx", -lookAngle.x * power);
-        data.putDouble("space_vy", -lookAngle.y * power);
-        data.putDouble("space_vz", -lookAngle.z * power);
-        data.putBoolean("space_was_on_ground", false);
     }
 
     @Override
@@ -144,10 +153,9 @@ public class AirGun extends Item {
         public static void onLeftClickEmpty(PlayerInteractEvent.LeftClickEmpty event) {
             var player = event.getEntity();
             ItemStack stack = AirGun.getAirGunStack(player);
-            if (!stack.isEmpty()) {
-                if (!player.level().isClientSide()) {
-                    shoot(player, stack, player.level());
-                }
+
+            if (!stack.isEmpty() && AirGun.getCharge(stack) > 0) {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new AirGunShootPayload());
             }
         }
     }

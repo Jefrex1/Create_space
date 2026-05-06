@@ -7,7 +7,9 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -20,120 +22,144 @@ public class SpacePhysicsHandler {
             ResourceLocation.fromNamespaceAndPath("create_space", "space")
     );
 
-    private static final double IMPULSE_SCALE = 0.33;
+    private static final double HORIZONTAL_STABILIZER = 1.095;
+    private static final double VERTICAL_STABILIZER = 1.018;
+    private static final double TERMINAL_VELOCITY = 1.5;
+    private static final double BOUNCE_FACTOR = 0.5; // Енергія відскоку (50%)
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
-        var entity = event.getEntity();
+        Entity entity = event.getEntity();
         if (!entity.level().dimension().equals(SPACE_DIM)) return;
 
+        boolean inAtmosphere = isInAtmosphere(entity);
+
         if (entity instanceof Player player) {
-            handlePlayer(player);
+            applySpacePhysics(player, inAtmosphere);
         } else {
-            handleGenericEntity(entity);
+            applyGenericSpacePhysics(entity, inAtmosphere);
         }
     }
 
-    private static void handlePlayer(Player player) {
-        if (isInAtmosphere(player)) {
-            player.getPersistentData().remove("space_vx");
-            player.getPersistentData().remove("space_vy");
-            player.getPersistentData().remove("space_vz");
-            player.getPersistentData().remove("space_was_on_ground");
+    private static void applySpacePhysics(Player player, boolean inAtmosphere) {
+        if (inAtmosphere || player.onGround() || player.isSwimming() || player.getAbilities().flying) {
+            player.setNoGravity(false);
+            // Чистимо дані, щоб уникнути фантомних відскоків
+            player.getPersistentData().remove("last_vel_x");
+            player.getPersistentData().remove("last_vel_y");
+            player.getPersistentData().remove("last_vel_z");
             return;
         }
 
+        player.setNoGravity(true);
+        Vec3 currentVel = player.getDeltaMovement();
         var data = player.getPersistentData();
-        var delta = player.getDeltaMovement();
-        boolean onGround = player.onGround();
 
-        if (onGround) {
-            data.remove("space_vx");
-            data.remove("space_vy");
-            data.remove("space_vz");
-            data.putBoolean("space_was_on_ground", true);
-            return;
+        // Отримуємо швидкість з минулого тіку
+        double lastX = data.contains("last_vel_x") ? data.getDouble("last_vel_x") : currentVel.x;
+        double lastY = data.contains("last_vel_y") ? data.getDouble("last_vel_y") : currentVel.y;
+        double lastZ = data.contains("last_vel_z") ? data.getDouble("last_vel_z") : currentVel.z;
+
+        // --- ЛОГІКА РОЗУМНОГО ВІДСКОКУ "БІЛЬЯРДНА КУЛЯ" ---
+        if (player.horizontalCollision || player.verticalCollision) {
+            double nextX = currentVel.x;
+            double nextY = currentVel.y;
+            double nextZ = currentVel.z;
+
+            // Перевірка удару об стіну по осі X
+            // Якщо швидкість по X впала до мінімуму, а була значною — інвертуємо її
+            if (Math.abs(currentVel.x) < 0.005 && Math.abs(lastX) > 0.005) {
+                nextX = -lastX * BOUNCE_FACTOR;
+            } else {
+                // Якщо удару по X не було, відновлюємо інерцію з пам'яті (щоб не зупинятися при боковому ковзанні)
+                nextX = lastX;
+            }
+
+            // Перевірка удару об стіну по осі Z
+            if (Math.abs(currentVel.z) < 0.005 && Math.abs(lastZ) > 0.005) {
+                nextZ = -lastZ * BOUNCE_FACTOR;
+            } else {
+                nextZ = lastZ;
+            }
+
+            // Перевірка вертикального удару (стеля/підлога)
+            if (player.verticalCollision) {
+                nextY = -lastY * BOUNCE_FACTOR;
+            } else {
+                nextY = lastY;
+            }
+
+            currentVel = new Vec3(nextX, nextY, nextZ);
         }
 
-        if (data.getBoolean("space_was_on_ground")) {
-            data.putDouble("space_vx", delta.x);
-            data.putDouble("space_vy", delta.y);
-            data.putDouble("space_vz", delta.z);
-            data.putBoolean("space_was_on_ground", false);
-            return;
+        // --- КОМПЕНСАЦІЯ ТЕРТЯ ТА СТАБІЛІЗАЦІЯ ---
+        double finalX = currentVel.x * HORIZONTAL_STABILIZER;
+        double finalY = currentVel.y * VERTICAL_STABILIZER;
+        double finalZ = currentVel.z * HORIZONTAL_STABILIZER;
+
+        Vec3 finalMotion = new Vec3(finalX, finalY, finalZ);
+
+        // М'яке обмеження швидкості для стабільності двигуна
+        if (finalMotion.lengthSqr() > TERMINAL_VELOCITY * TERMINAL_VELOCITY) {
+            finalMotion = finalMotion.scale(0.92);
         }
 
-        if (!data.contains("space_vx")) {
-            data.putDouble("space_vx", delta.x);
-            data.putDouble("space_vy", delta.y);
-            data.putDouble("space_vz", delta.z);
-            return;
+        player.setDeltaMovement(finalMotion);
+
+        // Оновлюємо пам'ять швидкості для наступного тіку
+        data.putDouble("last_vel_x", finalMotion.x);
+        data.putDouble("last_vel_y", finalMotion.y);
+        data.putDouble("last_vel_z", finalMotion.z);
+
+        // Повністю вимикаємо WASD-маневрування ногами
+        if (player instanceof LivingEntity living) {
+            living.xxa = 0; living.yya = 0; living.zza = 0;
         }
-
-        double vx = data.getDouble("space_vx");
-        double vy = data.getDouble("space_vy");
-        double vz = data.getDouble("space_vz");
-
-        if (Math.abs(delta.x) < Math.abs(vx) * 0.5) vx = delta.x;
-        if (Math.abs(delta.y) < Math.abs(vy) * 0.5) vy = delta.y;
-        if (Math.abs(delta.z) < Math.abs(vz) * 0.5) vz = delta.z;
-
-        player.setDeltaMovement(vx, vy, vz);
-        data.putDouble("space_vx", vx);
-        data.putDouble("space_vy", vy);
-        data.putDouble("space_vz", vz);
     }
 
-    private static void handleGenericEntity(Entity entity) {
-        if (isInAtmosphere(entity)) {
+    private static void applyGenericSpacePhysics(Entity entity, boolean inAtmosphere) {
+        if (inAtmosphere) {
             entity.setNoGravity(false);
             return;
         }
 
         entity.setNoGravity(true);
-        var delta = entity.getDeltaMovement();
+        Vec3 motion = entity.getDeltaMovement();
 
-        if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
-            CreateSpace.LOGGER.info("before: y={}, onGround={}", delta.y, entity.onGround());
-            living.setDeltaMovement(delta.x / 0.98, delta.y / 0.98, delta.z / 0.98);
-            living.setJumping(false);
-            living.xxa = 0;
-            living.yya = 0;
-            living.zza = 0;
-            CreateSpace.LOGGER.info("after: y={}", living.getDeltaMovement().y);
-        } else {
-            entity.setDeltaMovement(delta.x / 0.98, delta.y / 0.98, delta.z / 0.98);
+        // Для звичайних об'єктів просто підтримуємо інерцію
+        double cancel = 1.019;
+        Vec3 newMotion = motion.scale(cancel);
+
+        if (newMotion.lengthSqr() > TERMINAL_VELOCITY * TERMINAL_VELOCITY) {
+            newMotion = newMotion.scale(0.9);
         }
+
+        entity.setDeltaMovement(newMotion);
     }
 
     private static boolean isInAtmosphere(Entity entity) {
-        var feetPos = entity.blockPosition();
-        var headPos = feetPos.above();
-
-        if (entity.level().getBlockState(feetPos).is(ModBlocks.ATMOSPHERE.get()) ||
-                entity.level().getBlockState(headPos).is(ModBlocks.ATMOSPHERE.get())) {
+        BlockPos pos = entity.blockPosition();
+        if (isAtmosphereBlock(entity, pos) || isAtmosphereBlock(entity, pos.above())) {
             return true;
         }
 
-        var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer
-                .getContainer(entity.level());
-        if (container == null) return false;
-
-        for (var subLevel : container.getAllSubLevels()) {
-            var localPos = subLevel.logicalPose()
-                    .transformPositionInverse(entity.position());
-            var localFeet = BlockPos.containing(localPos.x, localPos.y, localPos.z);
-            var localHead = localFeet.above();
-
-            try {
-                if (subLevel.getLevel().getBlockState(localFeet)
-                        .is(ModBlocks.ATMOSPHERE.get()) ||
-                        subLevel.getLevel().getBlockState(localHead)
-                                .is(ModBlocks.ATMOSPHERE.get())) {
-                    return true;
-                }
-            } catch (Exception ignored) {}
+        var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer.getContainer(entity.level());
+        if (container != null) {
+            for (var subLevel : container.getAllSubLevels()) {
+                Vec3 localPos = subLevel.logicalPose().transformPositionInverse(entity.position());
+                BlockPos lp = BlockPos.containing(localPos.x, localPos.y, localPos.z);
+                try {
+                    if (subLevel.getLevel().getBlockState(lp).is(ModBlocks.ATMOSPHERE.get()) ||
+                            subLevel.getLevel().getBlockState(lp.above()).is(ModBlocks.ATMOSPHERE.get())) {
+                        return true;
+                    }
+                } catch (Exception ignored) {}
+            }
         }
         return false;
+    }
+
+    private static boolean isAtmosphereBlock(Entity entity, BlockPos pos) {
+        return entity.level().getBlockState(pos).is(ModBlocks.ATMOSPHERE.get());
     }
 }

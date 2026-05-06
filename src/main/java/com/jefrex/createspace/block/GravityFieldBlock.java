@@ -5,13 +5,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.MapColor;
 
-import java.util.ArrayDeque;
-import java.util.HashSet;
-import java.util.Queue;
+import java.util.*;
 
 public class GravityFieldBlock extends Block {
 
@@ -49,37 +48,52 @@ public class GravityFieldBlock extends Block {
     }
 
     private void spreadAtmosphere(Level level, BlockPos center) {
+        // Зберігаємо: позиція -> кількість кроків від центру
+        Map<BlockPos, Integer> reachable = new HashMap<>();
         Queue<BlockPos> queue = new ArrayDeque<>();
-        HashSet<BlockPos> visited = new HashSet<>();
 
         queue.add(center);
-        visited.add(center);
+        reachable.put(center, 0);
 
         int placed = 0;
 
-        while (!queue.isEmpty() && placed < BLOCKS_PER_TICK) {
+        while (!queue.isEmpty()) {
             var current = queue.poll();
+            int currentDepth = reachable.get(current);
+
+            // Далі MAX_SPREAD кроків не йдемо
+            if (currentDepth >= MAX_SPREAD) continue;
 
             for (var dir : net.minecraft.core.Direction.values()) {
                 var neighbor = current.relative(dir);
-
-                if (visited.contains(neighbor)) continue;
-                visited.add(neighbor);
-
-                if (neighbor.distSqr(center) > MAX_SPREAD * MAX_SPREAD) continue;
+                if (reachable.containsKey(neighbor)) continue;
 
                 var neighborState = level.getBlockState(neighbor);
+                boolean passable = neighborState.isAir()
+                        || neighborState.is(ModBlocks.ATMOSPHERE.get());
+                if (!passable) continue;
 
-                if (neighborState.isAir() && !neighborState.is(ModBlocks.ATMOSPHERE.get())) {
+                int neighborDepth = currentDepth + 1;
+                reachable.put(neighbor.immutable(), neighborDepth);
+                queue.add(neighbor.immutable());
+
+                if (!neighborState.is(ModBlocks.ATMOSPHERE.get()) && placed < BLOCKS_PER_TICK) {
                     level.setBlock(neighbor, ModBlocks.ATMOSPHERE.get().defaultBlockState(), 3);
                     placed++;
-                    queue.add(neighbor);
-                }
-                else if (neighborState.is(ModBlocks.ATMOSPHERE.get())) {
-                    queue.add(neighbor);
                 }
             }
         }
+
+        // Видаляємо блоки атмосфери які більше не досяжні
+        BlockPos.betweenClosedStream(
+                center.offset(-MAX_SPREAD, -MAX_SPREAD, -MAX_SPREAD),
+                center.offset(MAX_SPREAD, MAX_SPREAD, MAX_SPREAD)
+        ).forEach(pos -> {
+            if (!level.getBlockState(pos).is(ModBlocks.ATMOSPHERE.get())) return;
+            if (!reachable.containsKey(pos)) {
+                level.setBlock(pos.immutable(), Blocks.AIR.defaultBlockState(), 3);
+            }
+        });
     }
 
     private void removeAtmosphere(Level level, BlockPos center) {

@@ -3,7 +3,11 @@ package com.jefrex.createspace;
 import com.jefrex.createspace.block.ModBlocks;
 import com.jefrex.createspace.item.ModCreativeModeTabs;
 import com.jefrex.createspace.item.ModItems;
+import com.jefrex.createspace.network.AirGunShootPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -61,5 +65,21 @@ public class CreateSpace {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         LOGGER.info("HELLO from server starting");
+    }
+
+    @EventBusSubscriber(modid = "create_space", bus = EventBusSubscriber.Bus.MOD)
+    public class ModNetworking {
+
+        @SubscribeEvent
+        public static void register(RegisterPayloadHandlersEvent event) {
+            final PayloadRegistrar registrar = event.registrar("1.0.0"); // версія протоколу
+
+            // Реєструємо пакет: відправляємо з Клієнта на Сервер
+            registrar.playToServer(
+                    AirGunShootPayload.TYPE,
+                    AirGunShootPayload.STREAM_CODEC,
+                    AirGunShootPayload::handle
+            );
+        }
     }
 }
