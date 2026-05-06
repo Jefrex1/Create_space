@@ -48,7 +48,6 @@ public class GravityFieldBlock extends Block {
     }
 
     private void spreadAtmosphere(Level level, BlockPos center) {
-        // Зберігаємо: позиція -> кількість кроків від центру
         Map<BlockPos, Integer> reachable = new HashMap<>();
         Queue<BlockPos> queue = new ArrayDeque<>();
 
@@ -61,7 +60,6 @@ public class GravityFieldBlock extends Block {
             var current = queue.poll();
             int currentDepth = reachable.get(current);
 
-            // Далі MAX_SPREAD кроків не йдемо
             if (currentDepth >= MAX_SPREAD) continue;
 
             for (var dir : net.minecraft.core.Direction.values()) {
@@ -84,7 +82,6 @@ public class GravityFieldBlock extends Block {
             }
         }
 
-        // Видаляємо блоки атмосфери які більше не досяжні
         BlockPos.betweenClosedStream(
                 center.offset(-MAX_SPREAD, -MAX_SPREAD, -MAX_SPREAD),
                 center.offset(MAX_SPREAD, MAX_SPREAD, MAX_SPREAD)

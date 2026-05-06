@@ -2,16 +2,22 @@ package com.jefrex.createspace.physic;
 
 import com.jefrex.createspace.CreateSpace;
 import com.jefrex.createspace.block.ModBlocks;
+import com.simibubi.create.content.equipment.armor.BacktankUtil;
+import com.simibubi.create.content.equipment.armor.DivingBootsItem;
+import com.simibubi.create.content.equipment.armor.DivingHelmetItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingBreatheEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 @EventBusSubscriber(modid = CreateSpace.MODID)
@@ -38,6 +44,21 @@ public class SpacePhysicsHandler {
             applySpacePhysics(player, inAtmosphere);
         } else {
             applyGenericSpacePhysics(entity, inAtmosphere);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onSpaceBreathe(LivingBreatheEvent event) {
+        LivingEntity entity = event.getEntity();
+
+        if (!entity.level().dimension().location()
+                .equals(ResourceLocation.fromNamespaceAndPath("create_space", "space")))
+            return;
+
+        if (DivingHelmetItem.isWornBy(entity) &&
+                !BacktankUtil.getAllWithAir(entity).isEmpty()) {
+            event.setCanBreathe(true);
+            event.setRefillAirAmount(entity.getMaxAirSupply());
         }
     }
 
@@ -104,6 +125,11 @@ public class SpacePhysicsHandler {
             finalMotion = finalMotion.scale(0.92);
         }
 
+        ItemStack boots = player.getItemBySlot(EquipmentSlot.FEET);
+        if (boots.getItem() instanceof DivingBootsItem) {
+            finalMotion = finalMotion.add(0, -0.005, 0);
+        }
+
         player.setDeltaMovement(finalMotion);
 
         // Оновлюємо пам'ять швидкості для наступного тіку
@@ -137,7 +163,7 @@ public class SpacePhysicsHandler {
         entity.setDeltaMovement(newMotion);
     }
 
-    private static boolean isInAtmosphere(Entity entity) {
+    public static boolean isInAtmosphere(Entity entity) {
         BlockPos pos = entity.blockPosition();
         if (isAtmosphereBlock(entity, pos) || isAtmosphereBlock(entity, pos.above())) {
             return true;

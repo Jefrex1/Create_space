@@ -122,7 +122,6 @@ public class PlanetRenderer {
         setUniformFloat(shader, "uPlasmaTime", (System.currentTimeMillis() % 1000000) / 1000.0f);
         setUniformVec3(shader, "uSpherePosWorld", relativePos.x, relativePos.y, relativePos.z);
 
-        // Автоматичний напрямок на сонце
         Vector3f sunPos = getSunPosition();
         Vector3f sunDir = sunPos != null
                 ? new Vector3f(

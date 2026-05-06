@@ -1,13 +1,18 @@
 package com.jefrex.createspace.event;
 
 import com.jefrex.createspace.block.ModBlocks;
+import com.jefrex.createspace.physic.SpacePhysicsHandler;
+import com.simibubi.create.content.equipment.armor.BacktankUtil;
+import com.simibubi.create.content.equipment.armor.DivingHelmetItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.damagesource.DamageSources;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import java.util.HashMap;
@@ -18,7 +23,7 @@ import java.util.UUID;
 public class SpaceEvents {
 
     private static final ResourceLocation SPACE_DIM = ResourceLocation.fromNamespaceAndPath("create_space", "space");
-    private static final int GRACE_TICKS = 20;
+    private static final int GRACE_TICKS = 0;
     private static final float DAMAGE_PER_TICK = 2.5f;
 
     private static final Map<UUID, Integer> noAirTicks = new HashMap<>();
@@ -32,8 +37,18 @@ public class SpaceEvents {
 
         UUID id = player.getUUID();
 
-        if (isInAirField(player)) {
+        if (isInAirField(player) || hasDivingGear(player)) {
             noAirTicks.remove(id);
+
+            if (hasDivingGear(player) && !isInAirField(player)) {
+                if (player.level().getGameTime() % 20 == 0) {
+                    var backtanks = BacktankUtil.getAllWithAir(player);
+                    if (!backtanks.isEmpty()) {
+                        BacktankUtil.consumeAir(player, backtanks.get(0), 1);
+                    }
+                }
+            }
+
             return;
         }
 
@@ -43,6 +58,20 @@ public class SpaceEvents {
         if (ticks > GRACE_TICKS) {
             player.hurt(player.damageSources().freeze(), DAMAGE_PER_TICK);
         }
+    }
+
+    @SubscribeEvent
+    public static void onFallDamage(LivingFallEvent event) {
+        LivingEntity entity = event.getEntity();
+
+        if (!entity.level().dimension().location()
+                .equals(ResourceLocation.fromNamespaceAndPath("create_space", "space")))
+            return;
+
+        if (SpacePhysicsHandler.isInAtmosphere(entity))
+            return;
+
+        event.setDistance(event.getDistance() / 5f);
     }
 
     private static boolean isInAirField(Player player) {
@@ -76,5 +105,10 @@ public class SpaceEvents {
             } catch (Exception ignored) {}
         }
         return false;
+    }
+
+    private static boolean hasDivingGear(Player player) {
+        return DivingHelmetItem.isWornBy(player) &&
+                !BacktankUtil.getAllWithAir(player).isEmpty();
     }
 }

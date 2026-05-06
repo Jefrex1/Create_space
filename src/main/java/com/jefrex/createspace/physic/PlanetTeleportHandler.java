@@ -20,7 +20,6 @@ public class PlanetTeleportHandler {
     private static final Map<UUID, Integer> cooldowns = new HashMap<>();
     private static final int COOLDOWN_TICKS = 20;
 
-    // Зберігаємо з якої планети прилетів гравець (per dimension)
     private static final Map<UUID, String> playerOriginPlanet = new HashMap<>();
 
     @SubscribeEvent
@@ -37,8 +36,6 @@ public class PlanetTeleportHandler {
             for (ServerPlayer player : players) {
                 if (cooldowns.containsKey(player.getUUID())) continue;
 
-                // ---- Перевірка вльоту в планету ----
-                // ---- Перевірка вльоту в планету ----
                 for (PlanetConfig planet : PlanetRegistry.getPlanets()) {
                     if (planet.dimension() == null) continue;
 
@@ -57,12 +54,11 @@ public class PlanetTeleportHandler {
 
                         playerOriginPlanet.put(player.getUUID(), planet.id());
 
-                        // Замість spawn point — телепортуємо на висоту 900
                         var spawnPos = targetLevel.getSharedSpawnPos();
                         player.teleportTo(
                                 targetLevel,
                                 spawnPos.getX() + 0.5,
-                                900,                    // ← висота появи
+                                900,
                                 spawnPos.getZ() + 0.5,
                                 player.getYRot(),
                                 player.getXRot()
@@ -73,11 +69,9 @@ public class PlanetTeleportHandler {
                     }
                 }
 
-                // ---- Перевірка вильоту по Y > 1000 ----
                 if (player.getY() > 1000) {
                     String originId = playerOriginPlanet.get(player.getUUID());
 
-                    // Шукаємо планету — або ту з якої прилетів, або першу з космосу
                     PlanetConfig targetPlanet = PlanetRegistry.getPlanets().stream()
                             .filter(p -> p.dimension() != null)
                             .filter(p -> originId != null
@@ -93,20 +87,15 @@ public class PlanetTeleportHandler {
                             ResourceLocation.parse(targetPlanet.dimension())
                     );
 
-                    // Знаходимо космічний вимір (той де є планети без dimension, тобто сам космос)
-                    // Телепортуємо у вимір де розміщена планета-сфера
                     ServerLevel spaceLevel = server.getLevel(
-                            // Космос — це вимір де зараз НЕ знаходиться гравець
-                            // Якщо гравець у minecraft:overworld — телепортуємо у космос
                             ResourceKey.create(
                                     net.minecraft.core.registries.Registries.DIMENSION,
-                                    ResourceLocation.parse("create_space:space") // твій космічний вимір
+                                    ResourceLocation.parse("create_space:space")
                             )
                     );
 
                     if (spaceLevel == null) continue;
 
-                    // Телепортуємо поруч планети (трохи вище поверхні)
                     double spawnX = targetPlanet.x() + targetPlanet.radius() * 1.05;
                     double spawnY = targetPlanet.y();
                     double spawnZ = targetPlanet.z();
