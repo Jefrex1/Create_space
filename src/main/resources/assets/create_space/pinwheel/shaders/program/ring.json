@@ -1,0 +1,7 @@
+{
+  "vertex": "create_space:ring",
+  "fragment": "create_space:ring",
+  "samplers": [
+    { "name": "RingTexture" }
+  ]
+}

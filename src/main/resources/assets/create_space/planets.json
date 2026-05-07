@@ -31,6 +31,22 @@
     "rotationSpeed": 0.002
   },
   {
+    "id": "saturn",
+    "x": 500,
+    "y": 100,
+    "z": -52,
+    "radius": 100.0,
+    "texture": "create_space:textures/planet/saturn.png",
+    "rotationSpeed": 0.0003,
+    "ring": {
+      "texture": "create_space:textures/planet/saturn_rings.png",
+      "innerRadius": 1.3,
+      "outerRadius": 2.5,
+      "tilt": 27.0,
+      "opacity": 0.9
+    }
+  },
+  {
     "id": "sun",
     "x": 10000.0,
     "y": 1000.0,

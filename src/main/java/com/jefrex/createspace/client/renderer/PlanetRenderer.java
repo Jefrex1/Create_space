@@ -20,10 +20,12 @@ import java.util.Map;
 public class PlanetRenderer {
 
     private static final ResourceLocation SHADER = ResourceLocation.fromNamespaceAndPath("create_space", "planet");
+    private static final ResourceLocation RING_SHADER = ResourceLocation.fromNamespaceAndPath("create_space", "ring");
     private static final ResourceLocation SKY_SHADER = ResourceLocation.fromNamespaceAndPath("create_space", "skybox");
     private static final ResourceLocation SKY_TEXTURE = ResourceLocation.fromNamespaceAndPath("create_space", "textures/sky/space_sky.png");
 
     private static final Map<String, Float> rotations = new HashMap<>();
+
 
     public static void render(PoseStack poseStack, Matrix4f projectionMatrix, Camera camera) {
         renderSkybox(projectionMatrix, camera);
@@ -40,6 +42,9 @@ public class PlanetRenderer {
 
         for (PlanetConfig planet : sorted) {
             renderPlanet(planet, projectionMatrix, camera);
+            if (planet.ring() != null) {
+                renderRing(planet, projectionMatrix, camera);
+            }
         }
     }
 
@@ -193,5 +198,85 @@ public class PlanetRenderer {
     }
     private static void setUniformInt(ShaderProgram s, String name, int v) {
         var u = s.getUniform(name); if (u != null) u.setInt(v);
+    }
+
+    private static void renderRing(PlanetConfig planet, Matrix4f projectionMatrix, Camera camera) {
+        ShaderProgram shader = VeilRenderSystem.setShader(RING_SHADER);
+        if (shader == null) return;
+
+        setUniformInt(shader, "RingTexture", 0);
+
+        var camPos = camera.getPosition();
+        Vector3f relativePos = new Vector3f(
+                (float)(planet.x() - camPos.x),
+                (float)(planet.y() - camPos.y),
+                (float)(planet.z() - camPos.z)
+        );
+
+        Vector3f lookVector = new Vector3f(camera.getLookVector());
+        Vector3f upVector   = new Vector3f(camera.getUpVector());
+
+        // Матриця повороту камери
+        Matrix4f rotationOnlyView = new Matrix4f().setLookAt(
+                0, 0, 0,
+                lookVector.x, lookVector.y, lookVector.z,
+                upVector.x, upVector.y, upVector.z
+        );
+
+        // Позиція центру планети в просторі камери
+        Vector4f spherePosView = new Vector4f(relativePos, 1.0f).mul(rotationOnlyView);
+
+        // ОБЧИСЛЕННЯ НОРМАЛІ КІЛЬЦЯ
+        // Починаємо з вертикалі (локальна вісь Y планети)
+        Vector4f ringNormal = new Vector4f(0.0f, 1.0f, 0.0f, 0.0f);
+        // Нахиляємо згідно з конфігом (наприклад, 23 градуси для Сатурна)
+        ringNormal.rotateX((float) Math.toRadians(planet.ring().tilt()));
+        // Трансформуємо в простір камери, щоб шейдер бачив нормаль так само, як бачить камеру
+        ringNormal.mul(rotationOnlyView);
+
+        Matrix4f invProj = new Matrix4f(projectionMatrix).invert();
+
+        // Передаємо уніформи
+        setUniformVec3(shader, "uSpherePos", spherePosView.x, spherePosView.y, spherePosView.z);
+        setUniformVec3(shader, "uRingNormalView", ringNormal.x, ringNormal.y, ringNormal.z);
+        setUniformFloat(shader, "uScale", planet.radius());
+        setUniformMat4(shader, "uInvProj", invProj);
+        setUniformFloat(shader, "uInnerRadius", planet.ring().innerRadius());
+        setUniformFloat(shader, "uOuterRadius", planet.ring().outerRadius());
+        setUniformFloat(shader, "uOpacity", planet.ring().opacity());
+
+        // Сонце для освітлення
+        Vector3f sunPos = getSunPosition();
+        Vector3f sunDirWorld = sunPos != null
+                ? new Vector3f((float)(sunPos.x - planet.x()), (float)(sunPos.y - planet.y()), (float)(sunPos.z - planet.z())).normalize()
+                : new Vector3f(planet.sun().x(), planet.sun().y(), planet.sun().z()).normalize();
+
+// ПЕРЕВОДИМО В VIEW SPACE
+// Використовуємо ту саму rotationOnlyView, що і для нормалі
+        Vector4f sunDirView = new Vector4f(sunDirWorld, 0.0f).mul(rotationOnlyView);
+        setUniformVec3(shader, "uSunDirView", sunDirView.x, sunDirView.y, sunDirView.z);
+
+        // Рендер квада на весь екран
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthMask(false);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableCull();
+
+        Tesselator tesselator = Tesselator.getInstance();
+        BufferBuilder buf = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
+        buf.addVertex(-1.0f, -1.0f, 1.0f);
+        buf.addVertex( 1.0f, -1.0f, 1.0f);
+        buf.addVertex( 1.0f,  1.0f, 1.0f);
+        buf.addVertex(-1.0f,  1.0f, 1.0f);
+
+        shader.bind();
+        TextureManager tm = Minecraft.getInstance().getTextureManager();
+        GlStateManager._activeTexture(GL13.GL_TEXTURE0);
+        GlStateManager._bindTexture(tm.getTexture(ResourceLocation.parse(planet.ring().texture())).getId());
+
+        BufferUploader.drawWithShader(buf.buildOrThrow());
+        ShaderProgram.unbind();
+        RenderSystem.depthMask(true);
     }
 }
