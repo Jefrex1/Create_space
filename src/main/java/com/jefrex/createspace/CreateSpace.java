@@ -74,7 +74,6 @@ public class CreateSpace {
         public static void register(RegisterPayloadHandlersEvent event) {
             final PayloadRegistrar registrar = event.registrar("1.0.0"); // версія протоколу
 
-            // Реєструємо пакет: відправляємо з Клієнта на Сервер
             registrar.playToServer(
                     AirGunShootPayload.TYPE,
                     AirGunShootPayload.STREAM_CODEC,
