@@ -16,16 +16,18 @@ uniform vec3 uSunDir;
 uniform float uHasClouds;
 uniform float uCloudSpeed;
 
-// Атмосфера
 uniform float uAtmosphereRadius;
 uniform vec3  uRayleighCoeff;
 uniform float uMieCoeff;
 uniform float uAtmosphereStrength;
 
-// Сонце (НОВЕ)
 uniform float uIsStar;
 uniform vec3  uStarColor;
 uniform float uPlasmaTime;
+
+uniform float uPlasmaSpeed;
+uniform float uPlasmaScale;
+uniform float uCoronalIntensity;
 
 // ===================== УТИЛІТИ =====================
 
@@ -49,7 +51,7 @@ bool sphereHit(vec3 offset, vec3 dir, float radius, out float dist) {
     return false;
 }
 
-// ===================== GLOW =====================
+// ===================== ШУМ =====================
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -77,6 +79,40 @@ float fbm(vec2 p) {
     return v;
 }
 
+float noise3D(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+
+    float n000 = hash(i.xy + i.z * 17.0);
+    float n100 = hash(i.xy + vec2(1,0) + i.z * 17.0);
+    float n010 = hash(i.xy + vec2(0,1) + i.z * 17.0);
+    float n110 = hash(i.xy + vec2(1,1) + i.z * 17.0);
+    float n001 = hash(i.xy + (i.z+1.0) * 17.0);
+    float n101 = hash(i.xy + vec2(1,0) + (i.z+1.0) * 17.0);
+    float n011 = hash(i.xy + vec2(0,1) + (i.z+1.0) * 17.0);
+    float n111 = hash(i.xy + vec2(1,1) + (i.z+1.0) * 17.0);
+
+    return mix(
+        mix(mix(n000, n100, f.x), mix(n010, n110, f.x), f.y),
+        mix(mix(n001, n101, f.x), mix(n011, n111, f.x), f.y),
+        f.z
+    );
+}
+
+float fbm3D(vec3 p) {
+    float v = 0.0;
+    float a = 0.5;
+    for (int i = 0; i < 4; i++) {
+        v += a * noise3D(p);
+        p = p * 2.1 + vec3(1.7, 9.2, 3.5);
+        a *= 0.5;
+    }
+    return v;
+}
+
+// ===================== GLOW =====================
+
 vec4 starGlow(vec3 dir) {
     vec3 toSun = normalize(-uSpherePos);
     float cosA = dot(dir, toSun);
@@ -86,28 +122,48 @@ vec4 starGlow(vec3 dir) {
     float normalizedDist = edgeDist / sunAngularRadius;
 
     vec3 dirWorld = normalize((uInvView * vec4(dir, 0.0)).xyz);
-    vec3 normDir = normalize(dirWorld);
-    vec2 staticCoords = vec2(atan(normDir.z, normDir.x), acos(normDir.y));
-    vec2 noiseCoord = staticCoords * 2.5 + vec2(uPlasmaTime * 0.05, uPlasmaTime * 0.02);
+    vec3 camPosWorld = (uInvView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 
-    float plasma = fbm(noiseCoord) * 0.5 + fbm(noiseCoord * 1.7 + vec2(uPlasmaTime * 0.03)) * 0.3;
+    float noiseRadius = uScale * 1.1;
+    float t1, t2;
+    vec3 noisePos;
 
-    float deformed = normalizedDist - plasma * 0.66 * exp(-normalizedDist * 2.0);
+    if (sphereIntersect(camPosWorld - uSpherePosWorld, dirWorld, noiseRadius, t1, t2)) {
+        noisePos = (camPosWorld + dirWorld * t1) - uSpherePosWorld;
+    } else {
+        noisePos = dirWorld * noiseRadius;
+    }
 
-    float glow1 = exp(-deformed * 30.0) * 0.2;
-    float glow2 = exp(-deformed * 3.5) * 0.8;
-    float glow3 = exp(-deformed * 0.7) * 0.2;
-    float totalGlow = glow1 + glow2 + glow3;
+    vec3 p = noisePos * (2.5 / max(uScale, 0.001));
+    vec3 movement = vec3(uPlasmaTime * uPlasmaSpeed * 0.5,
+                         uPlasmaTime * uPlasmaSpeed * 0.2,
+                         uPlasmaTime * uPlasmaSpeed * 0.3);
 
-    float prominence = exp(-deformed * 3.0) * plasma * 4.0;
-    vec3 prominenceColor = vec3(1.0, 0.3, 0.05) * prominence;
+    float plasma = fbm3D(p + movement) * 0.6;
+    plasma += fbm3D(p * 1.7 - movement * 0.4) * 0.3;
 
-    vec3 innerColor = uStarColor * 2.0;
-    vec3 outerColor = uStarColor * vec3(1.0, 0.5, 0.1);
-    vec3 glowColor  = mix(outerColor, innerColor, clamp(glow1, 0.0, 1.0));
-    glowColor += prominenceColor;
+    float deformEffect = plasma * 0.45 * exp(-normalizedDist * 4.0);
+    float deformed = normalizedDist - deformEffect;
 
-    return vec4(glowColor * totalGlow, clamp(totalGlow, 0.0, 1.0));
+    float glow1 = exp(-deformed * 35.0) * 0.3;
+    float glow2 = exp(-deformed * 5.0) * 0.7;
+    float glow3 = exp(-deformed * 1.5) * 0.25;
+
+    float totalGlow = (glow1 + glow2 + glow3) * uCoronalIntensity;
+
+    vec3 coreColor   = uStarColor * 2.5;
+    vec3 orangeColor = uStarColor * vec3(1.0, 0.55, 0.1);
+    vec3 yellowColor = uStarColor * vec3(1.0, 0.85, 0.4);
+
+    vec3 finalGlowColor = mix(yellowColor, orangeColor, clamp(glow2, 0.0, 1.0));
+    finalGlowColor = mix(finalGlowColor, coreColor, clamp(glow1 * 2.0, 0.0, 1.0));
+
+    float prominence = exp(-deformed * 6.0) * plasma * 1.8;
+    vec3 prominenceColor = vec3(1.0, 0.5, 0.1) * prominence;
+
+    finalGlowColor += prominenceColor;
+
+    return vec4(finalGlowColor * totalGlow, clamp(totalGlow, 0.0, 1.0));
 }
 
 // ===================== АТМОСФЕРА =====================
@@ -186,7 +242,7 @@ void main() {
     float planetDist;
     bool hitsPlanet = sphereHit(uSpherePos, dir, uScale, planetDist);
 
-    // ---- Якщо це зірка (НОВЕ) ----
+    // ---- Зірка ----
     if (uIsStar > 0.5) {
         if (!hitsPlanet && !hitsAtm) discard;
 
@@ -218,7 +274,7 @@ void main() {
 
     if (!hitsAtm && !hitsPlanet) discard;
 
-    // ---- Рендер планети ----
+    // ---- Планета ----
     vec3 planetColor = vec3(0.0);
     if (hitsPlanet) {
         vec3 hitPointView  = dir * planetDist;
@@ -248,7 +304,7 @@ void main() {
         gl_FragDepth = 1.0;
     }
 
-    // ---- Атмосферне розсіювання ----
+    // ---- Атмосфера ----
     vec3 atmColor = vec3(0.0);
     if (hitsAtm) {
         float t1, t2;
@@ -265,7 +321,6 @@ void main() {
         }
     }
 
-    // ---- Змішування ----
     float atmAlpha = clamp(length(atmColor), 0.0, 1.0);
     vec3 finalColor = planetColor + atmColor;
 
