@@ -147,13 +147,13 @@ public class PlanetRenderer {
         setUniformFloat(shader, "uPlasmaScale",      3.0f);
         setUniformFloat(shader, "uCoronalIntensity", 1.5f);
 
-        float atmRadius = planet.isStar()
-                ? planet.radius() * 6.0f
-                : planet.radius() * 1.06f;
+        PlanetConfig.AtmosphereConfig atm = planet.atmosphere();
+        float atmRadiusMult = planet.isStar() ? 6.0f : atm.radius();
+        float atmRadius = planet.radius() * atmRadiusMult;
         setUniformFloat(shader, "uAtmosphereRadius", atmRadius);
-        setUniformVec3(shader, "uRayleighCoeff", 5.8e-3f, 13.5e-3f, 33.1e-3f);
-        setUniformFloat(shader, "uMieCoeff", 21e-3f);
-        setUniformFloat(shader, "uAtmosphereStrength", planet.atmosphereStrength());
+        setUniformVec3(shader, "uRayleighCoeff", atm.rayleighR(), atm.rayleighG(), atm.rayleighB());
+        setUniformFloat(shader, "uMieCoeff", atm.mie());
+        setUniformFloat(shader, "uAtmosphereStrength", atm.strength());
 
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);

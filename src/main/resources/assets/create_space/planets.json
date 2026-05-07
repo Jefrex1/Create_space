@@ -1,43 +1,68 @@
 [
   {
     "id": "earth",
-    "x": 30,
-    "y": 100,
-    "z": -52,
+    "x": 30, "y": 100, "z": -52,
     "radius": 50.0,
     "texture": "create_space:textures/planet/earth.png",
     "cloudTexture": "create_space:textures/planet/clouds.png",
     "cloudSpeed": 0.10,
     "rotationSpeed": 0.00025,
-    "atmosphereStrength": 5.0,
-    "dimension": "minecraft:overworld"
+    "dimension": "minecraft:overworld",
+    "atmosphere": {
+      "rayleighR": 0.0058,
+      "rayleighG": 0.0135,
+      "rayleighB": 0.0331,
+      "mie": 0.021,
+      "strength": 5.0,
+      "radius": 1.06
+    }
   },
   {
     "id": "moon",
-    "x": 1000,
-    "y": 100,
-    "z": -52,
+    "x": 1000, "y": 100, "z": -52,
     "radius": 5.0,
     "texture": "create_space:textures/planet/moon.png",
-    "rotationSpeed": 0.0025
+    "rotationSpeed": 0.0025,
+    "atmosphere": {
+      "rayleighR": 0.0,
+      "rayleighG": 0.0,
+      "rayleighB": 0.0,
+      "mie": 0.0,
+      "strength": 0.0,
+      "radius": 1.001
+    }
   },
   {
     "id": "mars",
-    "x": 300,
-    "y": 200,
-    "z": -52,
+    "x": 300, "y": 200, "z": -52,
     "radius": 30.0,
     "texture": "create_space:textures/planet/mars.png",
-    "rotationSpeed": 0.002
+    "cloudTexture": "create_space:textures/planet/mars_clouds.png",
+    "cloudSpeed": 0.10,
+    "rotationSpeed": 0.002,
+    "atmosphere": {
+      "rayleighR": 0.038,
+      "rayleighG": 0.022,
+      "rayleighB": 0.008,
+      "mie": 0.055,
+      "strength": 1.65,
+      "radius": 1.08
+    }
   },
   {
     "id": "saturn",
-    "x": 500,
-    "y": 100,
-    "z": -52,
+    "x": 500, "y": 100, "z": -52,
     "radius": 100.0,
     "texture": "create_space:textures/planet/saturn.png",
     "rotationSpeed": 0.0003,
+    "atmosphere": {
+      "rayleighR": 0.004,
+      "rayleighG": 0.009,
+      "rayleighB": 0.028,
+      "mie": 0.004,
+      "strength": 0.65,
+      "radius": 1.08
+    },
     "ring": {
       "texture": "create_space:textures/planet/saturn_rings.png",
       "innerRadius": 1.3,
@@ -48,9 +73,7 @@
   },
   {
     "id": "sun",
-    "x": 10000.0,
-    "y": 1000.0,
-    "z": 0.0,
+    "x": 10000.0, "y": 1000.0, "z": 0.0,
     "radius": 1000.0,
     "texture": "create_space:textures/planet/sun.png",
     "rotationSpeed": 0.0001,
