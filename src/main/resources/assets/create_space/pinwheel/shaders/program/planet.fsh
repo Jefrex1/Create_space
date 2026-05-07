@@ -168,15 +168,25 @@ vec4 starGlow(vec3 dir) {
 
 // ===================== АТМОСФЕРА =====================
 
+float getDensity(vec3 pos) {
+    float dist = length(pos - uSpherePosWorld);
+    float h = max(0.0, dist - uScale);
+    float thickness = max(uAtmosphereRadius - uScale, 0.001);
+    return exp(-(h / thickness) * 8.0);
+}
+
 float opticalDepth(vec3 rayPos, vec3 rayDir, float rayLen) {
     int steps = 8;
     float stepSize = rayLen / float(steps);
+    // FIX: Використовуємо нормалізований крок для глибини
+    float thickness = max(uAtmosphereRadius - uScale, 0.001);
+    float normalizedStep = stepSize / thickness;
+
     float depth = 0.0;
     vec3 pos = rayPos + rayDir * stepSize * 0.5;
+
     for (int i = 0; i < steps; i++) {
-        float height = length(pos - uSpherePosWorld) - uScale;
-        float h = max(0.0, height);
-        depth += exp(-h / (uAtmosphereRadius - uScale) * 8.0) * stepSize;
+        depth += getDensity(pos) * normalizedStep;
         pos += rayDir * stepSize;
     }
     return depth;
@@ -186,47 +196,50 @@ vec3 rayleighScatter(vec3 rayOrigin, vec3 rayDir, float rayLen, vec3 hitPoint) {
     int steps = 16;
     float stepSize = rayLen / float(steps);
 
+    float thickness = max(uAtmosphereRadius - uScale, 0.001);
+    // Нормалізований крок для розрахунків
+    float normalizedStep = stepSize / thickness;
+
     vec3 scatteredLight = vec3(0.0);
     float viewDepth = 0.0;
-
     vec3 pos = rayOrigin + rayDir * stepSize * 0.5;
     vec3 sunDir = normalize(uSunDir);
 
     for (int i = 0; i < steps; i++) {
-        float height = length(pos - uSpherePosWorld) - uScale;
-        float h = max(0.0, height);
-        float density = exp(-h / (uAtmosphereRadius - uScale) * 8.0);
+        float density = getDensity(pos);
 
         float shadowT1, shadowT2;
-        bool blockedByPlanet = sphereIntersect(
-            pos - uSpherePosWorld, sunDir, uScale, shadowT1, shadowT2
-        ) && shadowT2 > 0.0;
+        bool inShadow = sphereIntersect(pos - uSpherePosWorld, sunDir, uScale, shadowT1, shadowT2) && shadowT2 > 0.0;
 
-        float sunVisibility = blockedByPlanet ? 0.0 : 1.0;
+        if (!inShadow) {
+            float sunAngle = dot(normalize(pos - uSpherePosWorld), sunDir);
+            float sunVisibility = smoothstep(-0.15, 0.2, sunAngle); // Трохи м'якший термінатор
 
-        float sunAngle = dot(normalize(pos - uSpherePosWorld), sunDir);
-        float terminator = smoothstep(-0.1, 0.1, sunAngle);
-        sunVisibility *= terminator;
+            float t1, t2;
+            float sunRayLen = 0.0;
+            if (sphereIntersect(pos - uSpherePosWorld, sunDir, uAtmosphereRadius, t1, t2)) {
+                sunRayLen = max(0.0, t2);
+            }
+            float sunDepth = opticalDepth(pos, sunDir, sunRayLen);
 
-        float t1, t2;
-        float sunRayLen = 0.0;
-        if (sphereIntersect(pos - uSpherePosWorld, sunDir, uAtmosphereRadius, t1, t2)) {
-            sunRayLen = max(t1, t2);
+            viewDepth += density * normalizedStep;
+
+            // transmittance — це те, скільки світла ВТРАЧАЄТЬСЯ.
+            // Щоб атмосфера була помітнішою, ми робимо поглинання менш агресивним
+            vec3 transmittance = exp(-(uRayleighCoeff * (viewDepth + sunDepth) * 0.5));
+
+            // Збільшуємо внесок кожного кроку (множимо на 2.0 для густини)
+            scatteredLight += density * transmittance * uRayleighCoeff * normalizedStep * sunVisibility * 2.0;
         }
-        float sunDepth = opticalDepth(pos, sunDir, sunRayLen);
-
-        viewDepth += density * stepSize;
-
-        vec3 transmittance = exp(-(uRayleighCoeff * (viewDepth + sunDepth)));
-        scatteredLight += density * transmittance * uRayleighCoeff * stepSize * sunVisibility;
-
         pos += rayDir * stepSize;
     }
 
     float cosAngle = dot(rayDir, sunDir);
+    // Фазова функція (робимо розсіювання вперед трохи сильнішим для ефекту серпанку)
     float phase = 0.75 * (1.0 + cosAngle * cosAngle);
 
-    return scatteredLight * phase * uAtmosphereStrength;
+    // Підсилюємо фінальний результат, щоб повернути яскравість до правік
+    return scatteredLight * phase * uAtmosphereStrength * 1.5;
 }
 
 // ===================== MAIN =====================

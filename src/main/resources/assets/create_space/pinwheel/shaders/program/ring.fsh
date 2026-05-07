@@ -7,23 +7,20 @@ uniform sampler2D RingTexture;
 uniform float uInnerRadius;
 uniform float uOuterRadius;
 uniform float uOpacity;
-uniform vec3 uSunDirView;    // Напрямок світла у View Space
-uniform vec3 uSpherePos;     // Центр планети у View Space
+uniform vec3 uSunDirView;
+uniform vec3 uSpherePos;
 uniform vec3 uRingNormalView;
 uniform float uScale;
 uniform mat4 uInvProj;
 
-// Функція для перевірки, чи промінь світла впирається в планету
 float getShadow(vec3 hitPoint, vec3 lightDir) {
-    // Вектор від точки на кільці до центру планети
     vec3 L = uSpherePos - hitPoint;
     float tca = dot(L, lightDir);
-    if (tca < 0.0) return 1.0; // Сонце з іншого боку, але ми рахуємо тінь тільки від сфери
+    if (tca < 0.0) return 1.0;
 
     float d2 = dot(L, L) - tca * tca;
     float r2 = uScale * uScale;
 
-    // Якщо промінь світла проходить крізь радіус сфери - це тінь
     if (d2 < r2) return 0.0;
     return 1.0;
 }
@@ -44,6 +41,17 @@ void main() {
     vec3 hitRelative = hitView - uSpherePos;
     float dist = length(hitRelative);
 
+    // Перевірка чи точка кільця захована за планетою
+    vec3 toHit = hitView;
+    vec3 toPlanet = uSpherePos;
+    float tPlanet = dot(toPlanet, normalize(toHit));
+    float tHit = length(toHit);
+    if (tPlanet > 0.0 && tPlanet < tHit) {
+        vec3 closest = normalize(toHit) * tPlanet;
+        float distToCenter = length(closest - toPlanet);
+        if (distToCenter < uScale) discard;
+    }
+
     float innerR = uScale * uInnerRadius;
     float outerR = uScale * uOuterRadius;
     if (dist < innerR || dist > outerR) discard;
@@ -52,17 +60,9 @@ void main() {
     vec4 ringColor = texture(RingTexture, vec2(u, 0.5));
     if (ringColor.a < 0.01) discard;
 
-    // --- ОСВІТЛЕННЯ ТА ТІНЬ ---
     vec3 lightDir = normalize(uSunDirView);
-
-    // Тінь від планети
     float shadow = getShadow(hitView, lightDir);
-
-    // Дифузне освітлення (враховуємо обидві сторони кільця)
     float diff = max(0.5, abs(dot(normal, lightDir)));
-
-    // Фінальний колір з урахуванням тіні
-    // 0.05 - це мінімальне ембієнт-освітлення, щоб кільця в тіні не були абсолютно чорними
     float lighting = max(0.1, diff * shadow);
 
     fragColor = vec4(ringColor.rgb * lighting, ringColor.a * uOpacity);

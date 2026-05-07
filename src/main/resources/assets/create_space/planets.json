@@ -1,16 +1,16 @@
 [
   {
     "id": "sun",
-    "x": 0, "y": 100, "z": 0,
-    "radius": 5000.0,
+    "x": 0, "y": 0, "z": 0,
+    "radius": 2000.0,
     "texture": "create_space:textures/planet/sun.png",
     "rotationSpeed": 0.0001,
     "isStar": true
   },
   {
     "id": "mercury",
-    "x": 20000, "y": 100, "z": 0,
-    "radius": 190.0,
+    "x": 4200, "y": 0, "z": 800,
+    "radius": 70.0,
     "texture": "create_space:textures/planet/mercury.png",
     "rotationSpeed": 0.0008,
     "atmosphere": {
@@ -20,21 +20,21 @@
   },
   {
     "id": "venus",
-    "x": 40000, "y": 100, "z": 0,
-    "radius": 480.0,
+    "x": 6500, "y": 0, "z": -3200,
+    "radius": 174.0,
     "texture": "create_space:textures/planet/venus.png",
     "cloudTexture": "create_space:textures/planet/venus_clouds.png",
     "cloudSpeed": 0.04,
     "rotationSpeed": 0.0002,
     "atmosphere": {
-      "rayleighR": 0.035, "rayleighG": 0.028, "rayleighB": 0.005,
-      "mie": 0.12, "strength": 4.0, "radius": 1.12
+      "rayleighR": 0.018, "rayleighG": 0.014, "rayleighB": 0.003,
+      "mie": 0.12, "strength": 9.0, "radius": 1.12
     }
   },
   {
     "id": "earth",
-    "x": 65000, "y": 100, "z": 0,
-    "radius": 500.0,
+    "x": 8500, "y": 0, "z": 7000,
+    "radius": 182.0,
     "texture": "create_space:textures/planet/earth.png",
     "cloudTexture": "create_space:textures/planet/clouds.png",
     "cloudSpeed": 0.10,
@@ -47,8 +47,8 @@
   },
   {
     "id": "moon",
-    "x": 67000, "y": 100, "z": 0,
-    "radius": 135.0,
+    "x": 8500, "y": 0, "z": 7500,
+    "radius": 49.0,
     "texture": "create_space:textures/planet/moon.png",
     "rotationSpeed": 0.0025,
     "atmosphere": {
@@ -58,37 +58,37 @@
   },
   {
     "id": "mars",
-    "x": 95000, "y": 100, "z": 0,
-    "radius": 265.0,
+    "x": -10500, "y": 0, "z": 5800,
+    "radius": 97.0,
     "texture": "create_space:textures/planet/mars.png",
     "cloudTexture": "create_space:textures/planet/mars_clouds.png",
     "cloudSpeed": 0.02,
     "rotationSpeed": 0.002,
     "atmosphere": {
-      "rayleighR": 0.038, "rayleighG": 0.022, "rayleighB": 0.008,
-      "mie": 0.055, "strength": 1.65, "radius": 1.08
+      "rayleighR": 0.012, "rayleighG": 0.007, "rayleighB": 0.002,
+      "mie": 0.055, "strength": 2.5, "radius": 1.08
     }
   },
   {
     "id": "jupiter",
-    "x": 150000, "y": 100, "z": 0,
-    "radius": 5500.0,
+    "x": -28000, "y": 0, "z": -20000,
+    "radius": 2040.0,
     "texture": "create_space:textures/planet/jupiter.png",
     "rotationSpeed": 0.0006,
     "atmosphere": {
-      "rayleighR": 0.018, "rayleighG": 0.012, "rayleighB": 0.008,
-      "mie": 0.03, "strength": 2.5, "radius": 1.05
+      "rayleighR": 0.008, "rayleighG": 0.006, "rayleighB": 0.004,
+      "mie": 0.03, "strength": 6.0, "radius": 1.05
     }
   },
   {
     "id": "saturn",
-    "x": 250000, "y": 100, "z": 0,
-    "radius": 4600.0,
+    "x": 42000, "y": 0, "z": -35000,
+    "radius": 1720.0,
     "texture": "create_space:textures/planet/saturn.png",
     "rotationSpeed": 0.0003,
     "atmosphere": {
-      "rayleighR": 0.004, "rayleighG": 0.009, "rayleighB": 0.028,
-      "mie": 0.004, "strength": 0.65, "radius": 1.08
+      "rayleighR": 0.004, "rayleighG": 0.006, "rayleighB": 0.012,
+      "mie": 0.004, "strength": 4.0, "radius": 1.08
     },
     "ring": {
       "texture": "create_space:textures/planet/saturn_rings.png",
@@ -100,13 +100,13 @@
   },
   {
     "id": "uranus",
-    "x": 350000, "y": 100, "z": 0,
-    "radius": 2000.0,
+    "x": -55000, "y": 0, "z": 40000,
+    "radius": 730.0,
     "texture": "create_space:textures/planet/uranus.png",
     "rotationSpeed": 0.0004,
     "atmosphere": {
-      "rayleighR": 0.003, "rayleighG": 0.018, "rayleighB": 0.035,
-      "mie": 0.006, "strength": 1.8, "radius": 1.07
+      "rayleighR": 0.002, "rayleighG": 0.010, "rayleighB": 0.020,
+      "mie": 0.006, "strength": 4.5, "radius": 1.07
     },
     "ring": {
       "texture": "create_space:textures/planet/uranus_rings.png",
@@ -118,13 +118,13 @@
   },
   {
     "id": "neptune",
-    "x": 450000, "y": 100, "z": 0,
-    "radius": 1900.0,
+    "x": 30000, "y": 0, "z": 72000,
+    "radius": 710.0,
     "texture": "create_space:textures/planet/neptune.png",
     "rotationSpeed": 0.0005,
     "atmosphere": {
-      "rayleighR": 0.002, "rayleighG": 0.010, "rayleighB": 0.042,
-      "mie": 0.005, "strength": 2.2, "radius": 1.07
+      "rayleighR": 0.001, "rayleighG": 0.006, "rayleighB": 0.025,
+      "mie": 0.005, "strength": 5.0, "radius": 1.07
     }
   }
 ]
