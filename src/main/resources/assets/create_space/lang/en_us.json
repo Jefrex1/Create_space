@@ -7,6 +7,9 @@
 
   "creativetab.createspace.createspacetab": "Create: Space!",
 
+  "tooltip.createspace.diving_helmet_space": "Together with a Backtank, allows breathing in Space.",
+  "tooltip.createspace.diving_boots_space": "Applies slight gravitational pull in Space.",
+
   "create_space.configuration.title": "Create: Space! Configs",
   "create_space.configuration.section.create_space.common.toml": "Create: Space! Configs",
   "create_space.configuration.section.create_space.common.toml.title": "Create: Space! Configs",

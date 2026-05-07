@@ -31,7 +31,7 @@ public class SpacePhysicsHandler {
     private static final double HORIZONTAL_STABILIZER = 1.095;
     private static final double VERTICAL_STABILIZER = 1.018;
     private static final double TERMINAL_VELOCITY = 1.5;
-    private static final double BOUNCE_FACTOR = 0.5; // Енергія відскоку (50%)
+    private static final double BOUNCE_FACTOR = 0.5;
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
@@ -132,12 +132,10 @@ public class SpacePhysicsHandler {
 
         player.setDeltaMovement(finalMotion);
 
-        // Оновлюємо пам'ять швидкості для наступного тіку
         data.putDouble("last_vel_x", finalMotion.x);
         data.putDouble("last_vel_y", finalMotion.y);
         data.putDouble("last_vel_z", finalMotion.z);
 
-        // Повністю вимикаємо WASD-маневрування ногами
         if (player instanceof LivingEntity living) {
             living.xxa = 0; living.yya = 0; living.zza = 0;
         }
