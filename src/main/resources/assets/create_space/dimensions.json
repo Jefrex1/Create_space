@@ -1,0 +1,24 @@
+[
+  {
+    "dimension": "create_space:space",
+    "vacuum_damage": 2.5,
+    "gravity": 0.0,
+    "bounce_factor": 0.5,
+    "horizontal_stabilizer": 1.095,
+    "vertical_stabilizer": 1.018,
+    "terminal_velocity": 1.5,
+    "has_atmosphere_blocks": true,
+    "fall_damage_divider": 5.0
+  },
+  {
+    "dimension": "create_space:moon",
+    "vacuum_damage": 2.5,
+    "gravity": 0.01,
+    "bounce_factor": 0.3,
+    "horizontal_stabilizer": 1.04,
+    "vertical_stabilizer": 1.01,
+    "terminal_velocity": 2.5,
+    "has_atmosphere_blocks": true,
+    "fall_damage_divider": 3.0
+  }
+]

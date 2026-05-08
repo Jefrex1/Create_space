@@ -1,15 +1,15 @@
 package com.jefrex.createspace.event;
 
 import com.jefrex.createspace.block.ModBlocks;
+import com.jefrex.createspace.physic.DimensionConfig;
 import com.jefrex.createspace.physic.SpacePhysicsHandler;
 import com.simibubi.create.content.equipment.armor.BacktankUtil;
 import com.simibubi.create.content.equipment.armor.DivingHelmetItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.damagesource.DamageSources;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
@@ -22,24 +22,24 @@ import java.util.UUID;
 @EventBusSubscriber
 public class SpaceEvents {
 
-    private static final ResourceLocation SPACE_DIM = ResourceLocation.fromNamespaceAndPath("create_space", "space");
     private static final int GRACE_TICKS = 0;
-    private static final float DAMAGE_PER_TICK = 2.5f;
-
     private static final Map<UUID, Integer> noAirTicks = new HashMap<>();
 
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
-
         if (player.level().isClientSide()) return;
-        if (!player.level().dimension().location().equals(SPACE_DIM)) return;
+
+        ResourceLocation dim = player.level().dimension().location();
+        DimensionConfig cfg = DimensionConfig.get(dim);
+        if (cfg == null) return; // вимір не в конфізі — ігноруємо
 
         UUID id = player.getUUID();
 
         if (isInAirField(player) || hasDivingGear(player)) {
             noAirTicks.remove(id);
 
+            // витрачаємо повітря з балону тільки якщо не в атмосфері
             if (hasDivingGear(player) && !isInAirField(player)) {
                 if (player.level().getGameTime() % 20 == 0) {
                     var backtanks = BacktankUtil.getAllWithAir(player);
@@ -48,7 +48,6 @@ public class SpaceEvents {
                     }
                 }
             }
-
             return;
         }
 
@@ -56,7 +55,8 @@ public class SpaceEvents {
         noAirTicks.put(id, ticks);
 
         if (ticks > GRACE_TICKS) {
-            player.hurt(player.damageSources().freeze(), DAMAGE_PER_TICK);
+            // використовуємо vacuum_damage з конфігу виміру
+            player.hurt(player.damageSources().freeze(), (float) cfg.vacuum_damage);
         }
     }
 
@@ -64,45 +64,46 @@ public class SpaceEvents {
     public static void onFallDamage(LivingFallEvent event) {
         LivingEntity entity = event.getEntity();
 
-        if (!entity.level().dimension().location()
-                .equals(ResourceLocation.fromNamespaceAndPath("create_space", "space")))
-            return;
+        ResourceLocation dim = entity.level().dimension().location();
+        DimensionConfig cfg = DimensionConfig.get(dim);
+        if (cfg == null) return;
 
-        if (SpacePhysicsHandler.isInAtmosphere(entity))
-            return;
+        if (SpacePhysicsHandler.isInAtmosphere(entity)) return;
 
-        event.setDistance(event.getDistance() / 5f);
+        // використовуємо fall_damage_divider з конфігу виміру
+        event.setDistance(event.getDistance() / (float) cfg.fall_damage_divider);
     }
 
     private static boolean isInAirField(Player player) {
-        var feetPos = player.blockPosition();
-        var headPos = feetPos.above();
+        // позиція очей гравця
+        BlockPos eyePos = BlockPos.containing(player.getEyePosition());
+        BlockPos feetPos = player.blockPosition();
 
-        if (player.level().getBlockState(feetPos).getBlock() == ModBlocks.AIR_FIELD_AIR.get() ||
-                player.level().getBlockState(headPos).getBlock() == ModBlocks.AIR_FIELD_AIR.get() ||
-                player.level().getBlockState(feetPos).is(ModBlocks.ATMOSPHERE.get()) ||
-                player.level().getBlockState(headPos).is(ModBlocks.ATMOSPHERE.get())) {
-            return true;
+        for (BlockPos check : new BlockPos[]{feetPos, eyePos}) {
+            if (player.level().getBlockState(check).getBlock() == ModBlocks.AIR_FIELD_AIR.get() ||
+                    player.level().getBlockState(check).is(ModBlocks.ATMOSPHERE.get())) {
+                return true;
+            }
         }
 
+        // sublevels
         var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer
                 .getContainer(player.level());
         if (container == null) return false;
 
         for (var subLevel : container.getAllSubLevels()) {
-            var localPos = subLevel.logicalPose()
-                    .transformPositionInverse(player.position());
-            var localFeet = BlockPos.containing(localPos.x, localPos.y, localPos.z);
-            var localHead = localFeet.above();
+            var localFeetPos = subLevel.logicalPose().transformPositionInverse(player.position());
+            var localEyePos = subLevel.logicalPose().transformPositionInverse(player.getEyePosition());
 
-            try {
-                if (subLevel.getLevel().getBlockState(localFeet).getBlock() == ModBlocks.AIR_FIELD_AIR.get() ||
-                        subLevel.getLevel().getBlockState(localHead).getBlock() == ModBlocks.AIR_FIELD_AIR.get() ||
-                        subLevel.getLevel().getBlockState(localFeet).is(ModBlocks.ATMOSPHERE.get()) ||
-                        subLevel.getLevel().getBlockState(localHead).is(ModBlocks.ATMOSPHERE.get())) {
-                    return true;
-                }
-            } catch (Exception ignored) {}
+            for (Vec3 localPos : new Vec3[]{localFeetPos, localEyePos}) {
+                BlockPos lp = BlockPos.containing(localPos.x, localPos.y, localPos.z);
+                try {
+                    if (subLevel.getLevel().getBlockState(lp).getBlock() == ModBlocks.AIR_FIELD_AIR.get() ||
+                            subLevel.getLevel().getBlockState(lp).is(ModBlocks.ATMOSPHERE.get())) {
+                        return true;
+                    }
+                } catch (Exception ignored) {}
+            }
         }
         return false;
     }

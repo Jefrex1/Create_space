@@ -14,10 +14,9 @@
       "id": "sun",
       "texture": "create_space:textures/planet/sun.png",
       "yaw": 0,
-      "pitch": 0,
-      "angularSize": 0.059,
+      "pitch": 20,
+      "angularSize": 0.15,
       "rotationSpeed": 0.0001,
-      "fade": "night",
       "isStar": true
     },
     {

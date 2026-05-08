@@ -4,6 +4,7 @@ import com.jefrex.createspace.block.ModBlocks;
 import com.jefrex.createspace.item.ModCreativeModeTabs;
 import com.jefrex.createspace.item.ModItems;
 import com.jefrex.createspace.network.AirGunShootPayload;
+import com.jefrex.createspace.physic.DimensionConfig;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -38,6 +39,8 @@ public class CreateSpace {
 
         ModItems.register(modEventBus);
         ModBlocks.register(modEventBus);
+        // CreateSpace.java
+        modEventBus.addListener((FMLCommonSetupEvent e) -> DimensionConfig.load());
 
         NeoForge.EVENT_BUS.register(this);
 

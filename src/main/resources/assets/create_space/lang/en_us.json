@@ -1,7 +1,10 @@
 {
   "itemGroup.create_space": "Example Mod Tab",
+
   "block.create_space.example_block": "Example Block",
   "block.create_space.gravity_field": "Gravity Field",
+  "block.create_space.air_field": "Air Field",
+
   "item.create_space.example_item": "Example Item",
   "item.create_space.air_gun": "Air gun",
 
@@ -9,6 +12,14 @@
 
   "tooltip.createspace.diving_helmet_space": "Together with a Backtank, allows breathing in Space.",
   "tooltip.createspace.diving_boots_space": "Applies slight gravitational pull in Space.",
+
+
+
+
+
+
+
+
 
   "create_space.configuration.title": "Create: Space! Configs",
   "create_space.configuration.section.create_space.common.toml": "Create: Space! Configs",
