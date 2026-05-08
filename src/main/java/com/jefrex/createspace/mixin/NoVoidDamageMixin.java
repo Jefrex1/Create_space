@@ -14,10 +14,11 @@ public class NoVoidDamageMixin {
     private void cancelVoidKill(CallbackInfo ci) {
         Entity entity = (Entity)(Object)this;
 
-        // Тільки в космічному вимірі
-        if (!entity.level().dimension().location()
-                .equals(ResourceLocation.fromNamespaceAndPath("create_space", "space"))) return;
+        ResourceLocation currentDim = entity.level().dimension().location();
+        ResourceLocation spaceDim = ResourceLocation.fromNamespaceAndPath("create_space", "space");
 
-        ci.cancel(); // скасовуємо void kill повністю
+        if (currentDim.equals(spaceDim)) {
+            ci.cancel();
+        }
     }
 }
