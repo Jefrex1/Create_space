@@ -1,0 +1,52 @@
+{
+  "sky_objects": [
+    {
+      "id": "moon",
+      "texture": "create_space:textures/planet/moon.png",
+      "ground": true,
+      "groundScale": 1.0,
+      "atmosphere": {
+        "rayleighR": 0.0058, "rayleighG": 0.0135, "rayleighB": 0.0331,
+        "mie": 0.021, "strength": 5.0, "radius": 1.06
+      }
+    },
+    {
+      "id": "sun",
+      "texture": "create_space:textures/planet/sun.png",
+      "yaw": 0,
+      "pitch": 0,
+      "angularSize": 0.059,
+      "rotationSpeed": 0.0001,
+      "fade": "night",
+      "isStar": true
+    },
+    {
+      "id": "mars",
+      "texture": "create_space:textures/planet/mars.png",
+      "yaw": 225,
+      "pitch": 30,
+      "angularSize": 0.109,
+      "rotationSpeed": 0.002,
+      "fade": "night",
+      "sun": { "x": -1.0, "y": -0.5, "z": -0.3 },
+      "atmosphere": {
+        "rayleighR": 0.012, "rayleighG": 0.007, "rayleighB": 0.002,
+        "mie": 0.055, "strength": 2.5, "radius": 1.08
+      }
+    },
+    {
+      "id": "earth",
+      "texture": "create_space:textures/planet/earth.png",
+      "yaw": 25,
+      "pitch": 30,
+      "angularSize": 0.009,
+      "rotationSpeed": 0.002,
+      "fade": "night",
+      "sun": { "x": 1.0, "y": 0.5, "z": 0.3 },
+      "atmosphere": {
+        "rayleighR": 0.0058, "rayleighG": 0.0135, "rayleighB": 0.0331,
+        "mie": 0.021, "strength": 5.0, "radius": 1.06
+      }
+    }
+  ]
+}

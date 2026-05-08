@@ -1,0 +1,8 @@
+{
+  "vertex": "create_space:planet",
+  "fragment": "create_space:planet",
+  "samplers": [
+    { "name": "PlanetTexture" },
+    { "name": "CloudTexture" }
+  ]
+}

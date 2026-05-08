@@ -8,7 +8,7 @@
 
   "ambient_light": 0.0,
 
-  "fixed_time": 18000,
+  "fixed_time": 0,
 
   "effects": "minecraft:the_end",
 

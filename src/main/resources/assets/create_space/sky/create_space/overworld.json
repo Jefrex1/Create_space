@@ -1,0 +1,32 @@
+{
+  "sky_objects": [
+    {
+      "id": "mars",
+      "texture": "create_space:textures/planet/mars.png",
+      "yaw": 225,
+      "pitch": 30,
+      "angularSize": 0.009,
+      "rotationSpeed": 0.002,
+      "fade": "night",
+      "sun": { "x": 1.0, "y": 0.5, "z": 0.3 },
+      "atmosphere": {
+        "rayleighR": 0.8, "rayleighG": 0.3, "rayleighB": 0.1,
+        "mie": 0.0, "strength": 1.5, "radius": 1.05
+      }
+    },
+    {
+      "id": "moon",
+      "texture": "create_space:textures/planet/moon.png",
+      "yaw": 25,
+      "pitch": 30,
+      "angularSize": 0.009,
+      "rotationSpeed": 0.002,
+      "fade": "night",
+      "sun": { "x": 1.0, "y": 0.5, "z": 0.3 },
+      "atmosphere": {
+        "rayleighR": 0.8, "rayleighG": 0.3, "rayleighB": 0.1,
+        "mie": 0.0, "strength": 1.5, "radius": 1.05
+      }
+    }
+  ]
+}

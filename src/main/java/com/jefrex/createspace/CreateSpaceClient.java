@@ -1,57 +1,70 @@
 package com.jefrex.createspace;
 
-import com.jefrex.createspace.client.renderer.PlanetRegistry;
-import com.jefrex.createspace.client.renderer.PlanetRenderer;
+import com.jefrex.createspace.client.renderer.*;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
+import net.neoforged.neoforge.common.NeoForge;
 
-@Mod(value = CreateSpace.MODID, dist = Dist.CLIENT)
-@EventBusSubscriber(modid = CreateSpace.MODID, value = Dist.CLIENT)
+import java.util.List;
+
 public class CreateSpaceClient {
 
-    public CreateSpaceClient(ModContainer container) {
+    public CreateSpaceClient(ModContainer container, IEventBus modBus) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
+
+        // MOD bus — реєстрація ресурсів
+        modBus.addListener(this::onRegisterReloadListeners);
+        modBus.addListener(this::onClientSetup);
+
+        // FORGE bus — ігрові події
+        NeoForge.EVENT_BUS.addListener(this::onRenderLevel);
     }
 
-    @SubscribeEvent
-    static void onClientSetup(FMLClientSetupEvent event) {
+    private void onClientSetup(FMLClientSetupEvent event) {
         CreateSpace.LOGGER.info("HELLO FROM CLIENT SETUP");
-        CreateSpace.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+        CreateSpace.LOGGER.info("MINECRAFT NAME >> {}",
+                Minecraft.getInstance().getUser().getName());
     }
 
-    @SubscribeEvent
-    static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
-
-    }
-
-    @SubscribeEvent
-    static void onRegisterReloadListeners(RegisterClientReloadListenersEvent event) {
+    private void onRegisterReloadListeners(RegisterClientReloadListenersEvent event) {
         event.registerReloadListener(new PlanetRegistry());
+        event.registerReloadListener(new SkyRegistry());
     }
 
-    @SubscribeEvent
-    static void onRenderLevel(RenderLevelStageEvent event) {
+    private void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_SKY) return;
 
-        var mc = net.minecraft.client.Minecraft.getInstance();
+        var mc = Minecraft.getInstance();
         if (mc.level == null) return;
-        if (!mc.level.dimension().equals(CreateSpace.SPACE_LEVEL)) return;
 
-        PlanetRenderer.render(
-                event.getPoseStack(),
-                event.getProjectionMatrix(),
-                mc.gameRenderer.getMainCamera()
-        );
+        String dimId = mc.level.dimension().location().toString();
+
+
+        if (mc.level.dimension().equals(CreateSpace.SPACE_LEVEL)) {
+            PlanetRenderer.render(
+                    event.getPoseStack(),
+                    event.getProjectionMatrix(),
+                    mc.gameRenderer.getMainCamera()
+            );
+            return;
+        }
+
+        List<SkyObjectConfig> objects = SkyRegistry.getForDimension(dimId);
+        if (!objects.isEmpty()) {
+            SkyPlanetRenderer.render(
+                    event.getProjectionMatrix(),
+                    mc.gameRenderer.getMainCamera(),
+                    objects
+            );
+        }
     }
-
 }

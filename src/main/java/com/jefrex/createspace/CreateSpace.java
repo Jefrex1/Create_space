@@ -31,6 +31,7 @@ public class CreateSpace {
 
 
     public CreateSpace(IEventBus modEventBus, ModContainer modContainer) {
+        LOGGER.info("=== CREATE SPACE CONSTRUCTOR CALLED ===");
         modEventBus.addListener(this::commonSetup);
 
         ModCreativeModeTabs.register(modEventBus);
@@ -43,6 +44,10 @@ public class CreateSpace {
         modEventBus.addListener(this::addCreative);
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
+        if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
+            new CreateSpaceClient(modContainer, modEventBus);
+        }
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
