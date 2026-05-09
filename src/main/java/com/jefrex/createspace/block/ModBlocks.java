@@ -30,6 +30,12 @@ public class ModBlocks {
     public static final DeferredItem<BlockItem> AIR_FIELD_ITEM =
             ITEMS.registerSimpleBlockItem("air_field", AIR_FIELD);
 
+    public static final DeferredBlock<Block> REGOLITH =
+            BLOCKS.register("regolith", RegolithBlock::new);
+
+    public static final DeferredItem<BlockItem> REGOLITH_ITEM =
+            ITEMS.registerSimpleBlockItem("regolith", REGOLITH);
+
     public static void register(IEventBus eventBus) {
         BLOCKS.register(eventBus);
         ITEMS.register(eventBus);

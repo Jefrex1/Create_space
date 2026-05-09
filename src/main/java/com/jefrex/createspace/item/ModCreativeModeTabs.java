@@ -22,6 +22,7 @@ public class ModCreativeModeTabs {
                         output.accept(ModItems.AIRGUN);
                         output.accept(ModBlocks.GRAVITY_FIELD);
                         output.accept(ModBlocks.AIR_FIELD);
+                        output.accept(ModBlocks.REGOLITH);
                     }).build());
 
     public static void register(IEventBus eventBus) {

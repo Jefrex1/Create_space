@@ -1,6 +1,6 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/glass",
   "textures": {
-    "all": "create_space:block/gravity_field"
+    "all": "create_space:block/air_field_air"
   }
 }

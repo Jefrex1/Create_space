@@ -1,0 +1,14 @@
+{
+  "variants": {
+    "": [
+      { "model": "create_space:block/regolith", "weight": 1 },
+      { "model": "create_space:block/regolith", "y": 90, "weight": 1 },
+      { "model": "create_space:block/regolith", "y": 180, "weight": 1 },
+      { "model": "create_space:block/regolith", "y": 270, "weight": 1 },
+      { "model": "create_space:block/regolith_alt", "weight": 3 },
+      { "model": "create_space:block/regolith_alt", "y": 90, "weight": 3 },
+      { "model": "create_space:block/regolith_alt", "y": 180, "weight": 3 },
+      { "model": "create_space:block/regolith_alt", "y": 270, "weight": 3 }
+    ]
+  }
+}

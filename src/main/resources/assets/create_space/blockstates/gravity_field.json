@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "create_space:block/air_field_air" }
+  }
+}

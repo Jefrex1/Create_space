@@ -1,12 +1,13 @@
 package com.jefrex.createspace;
 
+import com.jefrex.createspace.block.ModBlocks;
 import com.jefrex.createspace.client.renderer.*;
 import net.minecraft.client.Minecraft;
-import net.neoforged.api.distmarker.Dist;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
+import net.minecraft.client.renderer.RenderType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
@@ -21,11 +22,9 @@ public class CreateSpaceClient {
     public CreateSpaceClient(ModContainer container, IEventBus modBus) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
 
-        // MOD bus — реєстрація ресурсів
         modBus.addListener(this::onRegisterReloadListeners);
         modBus.addListener(this::onClientSetup);
 
-        // FORGE bus — ігрові події
         NeoForge.EVENT_BUS.addListener(this::onRenderLevel);
     }
 
@@ -33,6 +32,10 @@ public class CreateSpaceClient {
         CreateSpace.LOGGER.info("HELLO FROM CLIENT SETUP");
         CreateSpace.LOGGER.info("MINECRAFT NAME >> {}",
                 Minecraft.getInstance().getUser().getName());
+
+        // Реєструємо прозорий рендер для блоків атмосфери
+        ItemBlockRenderTypes.setRenderLayer(ModBlocks.ATMOSPHERE.get(), RenderType.translucent());
+        ItemBlockRenderTypes.setRenderLayer(ModBlocks.AIR_FIELD_AIR.get(), RenderType.translucent());
     }
 
     private void onRegisterReloadListeners(RegisterClientReloadListenersEvent event) {
@@ -47,7 +50,6 @@ public class CreateSpaceClient {
         if (mc.level == null) return;
 
         String dimId = mc.level.dimension().location().toString();
-
 
         if (mc.level.dimension().equals(CreateSpace.SPACE_LEVEL)) {
             PlanetRenderer.render(

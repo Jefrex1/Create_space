@@ -3,8 +3,10 @@
     {
       "id": "moon",
       "texture": "create_space:textures/planet/moon.png",
-      "ground": true,
-      "groundScale": 1.0,
+      "yaw": 0,
+      "pitch": -90,
+      "angularSize": 0.75,
+      "rotationSpeed": 0.0,
       "atmosphere": {
         "rayleighR": 0.0058, "rayleighG": 0.0135, "rayleighB": 0.0331,
         "mie": 0.021, "strength": 5.0, "radius": 1.06
@@ -14,7 +16,7 @@
       "id": "sun",
       "texture": "create_space:textures/planet/sun.png",
       "yaw": 0,
-      "pitch": 20,
+      "pitch": 0,
       "angularSize": 0.15,
       "rotationSpeed": 0.0001,
       "isStar": true
