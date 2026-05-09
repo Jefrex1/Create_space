@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "create_space:block/lunar_bit" },
+    "facing=east":  { "model": "create_space:block/lunar_bit", "y": 90 },
+    "facing=south": { "model": "create_space:block/lunar_bit", "y": 180 },
+    "facing=west":  { "model": "create_space:block/lunar_bit", "y": 270 }
+  }
+}

@@ -23,6 +23,7 @@ public class ModCreativeModeTabs {
                         output.accept(ModBlocks.GRAVITY_FIELD);
                         output.accept(ModBlocks.AIR_FIELD);
                         output.accept(ModBlocks.REGOLITH);
+                        output.accept(ModBlocks.LUNAR_BIT);
                     }).build());
 
     public static void register(IEventBus eventBus) {

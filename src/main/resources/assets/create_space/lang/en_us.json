@@ -4,6 +4,8 @@
   "block.create_space.example_block": "Example Block",
   "block.create_space.gravity_field": "Gravity Field",
   "block.create_space.air_field": "Air Field",
+  "block.create_space.regolith": "Regolith",
+  "block.create_space.lunar_bit": "Liunar Bit",
 
   "item.create_space.example_item": "Example Item",
   "item.create_space.air_gun": "Air gun",

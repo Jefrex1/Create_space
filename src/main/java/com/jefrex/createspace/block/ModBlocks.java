@@ -3,6 +3,9 @@ package com.jefrex.createspace.block;
 import com.jefrex.createspace.CreateSpace;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -35,6 +38,17 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> REGOLITH_ITEM =
             ITEMS.registerSimpleBlockItem("regolith", REGOLITH);
+
+    public static final DeferredBlock<LunarBitBlock> LUNAR_BIT =
+            BLOCKS.registerBlock("lunar_bit", LunarBitBlock::new,
+                    BlockBehaviour.Properties.of()
+                            .strength(0.1f, 3.0f)
+                            .sound(SoundType.STONE)
+                            .instrument(NoteBlockInstrument.BASEDRUM)
+                            .noOcclusion());
+
+    public static final DeferredItem<BlockItem> LUNAR_BIT_ITEM =
+            ITEMS.registerSimpleBlockItem("lunar_bit", LUNAR_BIT);
 
     public static void register(IEventBus eventBus) {
         BLOCKS.register(eventBus);
