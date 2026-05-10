@@ -10,6 +10,8 @@
   "item.create_space.example_item": "Example Item",
   "item.create_space.air_gun": "Air gun",
 
+  "entity.create_space.meteorite": "Meteorite",
+
   "creativetab.createspace.createspacetab": "Create: Space!",
 
   "tooltip.createspace.diving_helmet_space": "Together with a Backtank, allows breathing in Space.",

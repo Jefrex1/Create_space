@@ -1,12 +1,16 @@
 package com.jefrex.createspace;
 
 import com.jefrex.createspace.block.ModBlocks;
+import com.jefrex.createspace.entity.MeteoriteRenderer;
+import com.jefrex.createspace.entity.ModEntities;
+import com.jefrex.createspace.event.MeteoriteEvent;
 import com.jefrex.createspace.item.ModCreativeModeTabs;
 import com.jefrex.createspace.item.ModItems;
 import com.jefrex.createspace.network.AirGunShootPayload;
 import com.jefrex.createspace.physic.DimensionConfig;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import org.slf4j.Logger;
@@ -43,6 +47,8 @@ public class CreateSpace {
         modEventBus.addListener((FMLCommonSetupEvent e) -> DimensionConfig.load());
 
         NeoForge.EVENT_BUS.register(this);
+        NeoForge.EVENT_BUS.register(MeteoriteEvent.class);
+        ModEntities.ENTITY_TYPES.register(modEventBus);
 
         modEventBus.addListener(this::addCreative);
 
@@ -87,6 +93,10 @@ public class CreateSpace {
                     AirGunShootPayload.STREAM_CODEC,
                     AirGunShootPayload::handle
             );
+        }
+        @SubscribeEvent
+        public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
+            event.registerEntityRenderer(ModEntities.METEORITE.get(), MeteoriteRenderer::new);
         }
     }
 }

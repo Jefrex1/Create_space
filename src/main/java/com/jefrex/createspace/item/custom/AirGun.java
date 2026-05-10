@@ -62,6 +62,8 @@ public class AirGun extends Item {
         int charge = getCharge(stack);
         if (charge <= 0) return;
 
+        int amountToDamage = charge;
+
         setCharge(stack, 0);
 
         Vec3 lookAngle = player.getLookAngle();
@@ -73,6 +75,10 @@ public class AirGun extends Item {
 
         player.setDeltaMovement(player.getDeltaMovement().add(pushX, pushY, pushZ));
         player.hurtMarked = true;
+
+        if (!level.isClientSide()) {
+            stack.hurtAndBreak(amountToDamage, player, Player.getSlotForHand(player.getUsedItemHand()));
+        }
 
         var data = player.getPersistentData();
 
@@ -96,17 +102,24 @@ public class AirGun extends Item {
 
     @Override
     public boolean isBarVisible(ItemStack stack) {
-        return getCharge(stack) > 0;
+        return getCharge(stack) > 0 || stack.isDamaged();
     }
 
     @Override
     public int getBarWidth(ItemStack stack) {
-        return Math.round(13.0F * ((float) getCharge(stack) / MAX_CHARGES));
+        int charge = getCharge(stack);
+        if (charge > 0) {
+            return Math.round(13.0F * ((float) charge / MAX_CHARGES));
+        }
+        return Math.round(13.0F * (1.0F - (float)stack.getDamageValue() / stack.getMaxDamage()));
     }
 
     @Override
     public int getBarColor(ItemStack stack) {
-        return 0xFFFFFF;
+        if (getCharge(stack) > 0) {
+            return 0xFFFFFF;
+        }
+        return net.minecraft.util.Mth.hsvToRgb(Math.max(0.0F, (1.0F - (float)stack.getDamageValue() / stack.getMaxDamage())) / 3.0F, 1.0F, 1.0F);
     }
 
     public static void setCharge(ItemStack stack, int value) {
