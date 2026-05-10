@@ -3,7 +3,8 @@
   "package": "com.jefrex.createspace.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "NoVoidDamageMixin"
+    "NoVoidDamageMixin",
+    "LevelRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

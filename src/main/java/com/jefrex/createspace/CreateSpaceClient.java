@@ -62,7 +62,10 @@ public class CreateSpaceClient {
 
         List<SkyObjectConfig> objects = SkyRegistry.getForDimension(dimId);
         if (!objects.isEmpty()) {
-            SkyPlanetRenderer.render(
+            // Замість SkyPlanetRenderer — адаптер який конвертує в PlanetConfig
+            // і рендерить через той самий PlanetRenderer
+            SkyObjectAdapter.render(
+                    event.getPoseStack(),
                     event.getProjectionMatrix(),
                     mc.gameRenderer.getMainCamera(),
                     objects

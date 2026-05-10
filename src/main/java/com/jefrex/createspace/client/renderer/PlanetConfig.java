@@ -13,7 +13,8 @@ public record PlanetConfig(
         SunConfig sun,
         String dimension,
         RingConfig ring,
-        AtmosphereConfig atmosphere  // НОВЕ
+        AtmosphereConfig atmosphere,
+        float alpha  // НОВЕ
 ) {
     public record SunConfig(float x, float y, float z) {}
 
@@ -57,7 +58,8 @@ public record PlanetConfig(
                 c.sun() != null ? c.sun() : new SunConfig(1.0f, 0.5f, 0.3f),
                 c.dimension(),
                 c.ring(),
-                atm
+                atm,
+                1.0f  // alpha завжди повна для космічних планет
         );
     }
 }

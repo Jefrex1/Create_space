@@ -1,0 +1,153 @@
+{
+  "sky_objects": [
+    {
+      "id": "earth",
+      "texture": "create_space:textures/planet/earth.png",
+      "cloudTexture": "create_space:textures/planet/clouds.png",
+      "cloudSpeed": 0.10,
+      "yaw": 160,
+      "pitch": -90,
+      "angularSize": 0.8075,
+      "rotationSpeed": 0.0,
+      "atmosphere": {
+        "rayleighR": 0.0058, "rayleighG": 0.0135, "rayleighB": 0.0331,
+        "mie": 0.021, "strength": 5.0, "radius": 1.06
+      }
+    },
+    {
+      "id": "sun",
+      "texture": "create_space:textures/planet/sun.png",
+      "yaw": -270,
+      "pitch": 0,
+      "angularSize": 0.04521,
+      "rotationSpeed": 0.0001,
+      "isStar": true
+    },
+    {
+      "id": "mercury",
+      "texture": "create_space:textures/planet/mercury.png",
+      "yaw": 271,
+      "pitch": 5,
+      "angularSize": 0.001386,
+      "rotationSpeed": 0.0008,
+      "fade": "night",
+      "sun": { "x": -0.98, "y": 0.0, "z": 0.18 },
+      "atmosphere": {
+        "rayleighR": 0.0, "rayleighG": 0.0, "rayleighB": 0.0,
+        "mie": 0.0, "strength": 0.0, "radius": 1.001
+      }
+    },
+    {
+      "id": "venus",
+      "texture": "create_space:textures/planet/venus.png",
+      "cloudTexture": "create_space:textures/planet/venus_clouds.png",
+      "cloudSpeed": 0.04,
+      "yaw": 250,
+      "pitch": 5,
+      "angularSize": 0.002852,
+      "rotationSpeed": 0.0002,
+      "fade": "night",
+      "sun": { "x": -0.93, "y": 0.0, "z": 0.36 },
+      "atmosphere": {
+        "rayleighR": 0.018, "rayleighG": 0.014, "rayleighB": 0.003,
+        "mie": 0.12, "strength": 9.0, "radius": 1.12
+      }
+    },
+    {
+      "id": "earth_moon",
+      "texture": "create_space:textures/planet/moon.png",
+      "yaw": 270,
+      "pitch": 5,
+      "angularSize": 0.06978,
+      "rotationSpeed": 0.00025,
+      "fade": "night",
+      "sun": { "x": -1.0, "y": 0.0, "z": 0.0 }
+    },
+    {
+      "id": "mars",
+      "texture": "create_space:textures/planet/mars.png",
+      "cloudTexture": "create_space:textures/planet/mars_clouds.png",
+      "cloudSpeed": 0.02,
+      "yaw": 120,
+      "pitch": 5,
+      "angularSize": 0.001010,
+      "rotationSpeed": 0.002,
+      "fade": "night",
+      "sun": { "x": 0.97, "y": 0.0, "z": -0.22 },
+      "atmosphere": {
+        "rayleighR": 0.012, "rayleighG": 0.007, "rayleighB": 0.002,
+        "mie": 0.055, "strength": 2.5, "radius": 1.08
+      }
+    },
+    {
+      "id": "jupiter",
+      "texture": "create_space:textures/planet/jupiter.png",
+      "yaw": 55,
+      "pitch": 5,
+      "angularSize": 0.008164,
+      "rotationSpeed": 0.0006,
+      "fade": "night",
+      "sun": { "x": 0.62, "y": 0.0, "z": 0.79 },
+      "atmosphere": {
+        "rayleighR": 0.008, "rayleighG": 0.006, "rayleighB": 0.004,
+        "mie": 0.03, "strength": 6.0, "radius": 1.05
+      }
+    },
+    {
+      "id": "saturn",
+      "texture": "create_space:textures/planet/saturn.png",
+      "yaw": 326,
+      "pitch": 5,
+      "angularSize": 0.004472,
+      "rotationSpeed": 0.0003,
+      "fade": "night",
+      "sun": { "x": -0.87, "y": 0.0, "z": 0.50 },
+      "atmosphere": {
+        "rayleighR": 0.004, "rayleighG": 0.006, "rayleighB": 0.012,
+        "mie": 0.004, "strength": 4.0, "radius": 1.08
+      },
+      "ring": {
+        "texture": "create_space:textures/planet/saturn_rings.png",
+        "innerRadius": 1.3,
+        "outerRadius": 2.5,
+        "tilt": 27.0,
+        "opacity": 0.9
+      }
+    },
+    {
+      "id": "uranus",
+      "texture": "create_space:textures/planet/uranus.png",
+      "yaw": 141,
+      "pitch": 5,
+      "angularSize": 0.001502,
+      "rotationSpeed": 0.0004,
+      "fade": "night",
+      "sun": { "x": 0.78, "y": 0.0, "z": -0.63 },
+      "atmosphere": {
+        "rayleighR": 0.002, "rayleighG": 0.010, "rayleighB": 0.020,
+        "mie": 0.006, "strength": 4.5, "radius": 1.07
+      },
+      "ring": {
+        "texture": "create_space:textures/planet/uranus_rings.png",
+        "innerRadius": 1.4,
+        "outerRadius": 2.0,
+        "tilt": 90.0,
+        "opacity": 0.4
+      }
+    },
+    {
+      "id": "neptune",
+      "texture": "create_space:textures/planet/neptune.png",
+      "yaw": 334,
+      "pitch": 5,
+      "angularSize": 0.001951,
+      "rotationSpeed": 0.0005,
+      "fade": "night",
+      "sun": { "x": -0.92, "y": 0.0, "z": -0.39 },
+      "atmosphere": {
+        "rayleighR": 0.001, "rayleighG": 0.006, "rayleighB": 0.025,
+        "mie": 0.005, "strength": 5.0, "radius": 1.07
+      }
+    }
+  ]
+}

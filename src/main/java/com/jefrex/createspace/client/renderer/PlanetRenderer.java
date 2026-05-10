@@ -19,20 +19,35 @@ import java.util.Map;
 
 public class PlanetRenderer {
 
-    private static final ResourceLocation SHADER = ResourceLocation.fromNamespaceAndPath("create_space", "planet");
+    private static final ResourceLocation SHADER      = ResourceLocation.fromNamespaceAndPath("create_space", "planet");
     private static final ResourceLocation RING_SHADER = ResourceLocation.fromNamespaceAndPath("create_space", "ring");
-    private static final ResourceLocation SKY_SHADER = ResourceLocation.fromNamespaceAndPath("create_space", "skybox");
+    private static final ResourceLocation SKY_SHADER  = ResourceLocation.fromNamespaceAndPath("create_space", "skybox");
     private static final ResourceLocation SKY_TEXTURE = ResourceLocation.fromNamespaceAndPath("create_space", "textures/sky/space_sky.png");
 
     private static final Map<String, Float> rotations = new HashMap<>();
 
-
+    // Викликається з космосу (SPACE_LEVEL)
     public static void render(PoseStack poseStack, Matrix4f projectionMatrix, Camera camera) {
         renderSkybox(projectionMatrix, camera);
 
         var camPos = camera.getPosition();
 
         List<PlanetConfig> sorted = PlanetRegistry.getPlanets().stream()
+                .sorted((a, b) -> {
+                    double da = Math.pow(a.x() - camPos.x, 2) + Math.pow(a.y() - camPos.y, 2) + Math.pow(a.z() - camPos.z, 2);
+                    double db = Math.pow(b.x() - camPos.x, 2) + Math.pow(b.y() - camPos.y, 2) + Math.pow(b.z() - camPos.z, 2);
+                    return Double.compare(db, da);
+                })
+                .toList();
+
+        renderPlanets(poseStack, projectionMatrix, camera, sorted);
+    }
+
+    // Публічний метод — викликається також з SkyObjectAdapter
+    public static void renderPlanets(PoseStack poseStack, Matrix4f projectionMatrix, Camera camera, List<PlanetConfig> planets) {
+        var camPos = camera.getPosition();
+
+        List<PlanetConfig> sorted = planets.stream()
                 .sorted((a, b) -> {
                     double da = Math.pow(a.x() - camPos.x, 2) + Math.pow(a.y() - camPos.y, 2) + Math.pow(a.z() - camPos.z, 2);
                     double db = Math.pow(b.x() - camPos.x, 2) + Math.pow(b.y() - camPos.y, 2) + Math.pow(b.z() - camPos.z, 2);
@@ -60,13 +75,20 @@ public class PlanetRenderer {
         ShaderProgram shader = VeilRenderSystem.setShader(SKY_SHADER);
         if (shader == null) return;
 
-        Matrix4f invProj = new Matrix4f(projectionMatrix).invert();
+        Matrix4f invProj    = new Matrix4f(projectionMatrix).invert();
         Matrix4f viewMatrix = new Matrix4f().rotation(camera.rotation());
 
-        setUniformMat4(shader, "uInvProj", invProj);
-        setUniformMat4(shader, "uViewMatrix", viewMatrix);
-        setUniformFloat(shader, "uRotation", (System.currentTimeMillis() % 360000) / 20000.0f);
-        setUniformInt(shader, "SkyboxTexture", 0);
+        // Час доби — повний оберт за ігрову добу, синхронно з планетами
+        Minecraft mc = Minecraft.getInstance();
+        float dayTime = (mc.level != null)
+                ? (float)(mc.level.getDayTime() % 24000) / 24000.0f
+                : 0.0f;
+        float rotation = dayTime * (float)(Math.PI * 2.0);
+
+        setUniformMat4(shader,  "uInvProj",      invProj);
+        setUniformMat4(shader,  "uViewMatrix",   viewMatrix);
+        setUniformFloat(shader, "uRotation",     rotation);
+        setUniformInt(shader,   "SkyboxTexture", 0);
 
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
@@ -97,7 +119,7 @@ public class PlanetRenderer {
         if (shader == null) return;
 
         setUniformInt(shader, "PlanetTexture", 0);
-        setUniformInt(shader, "CloudTexture", 1);
+        setUniformInt(shader, "CloudTexture",  1);
 
         float rotation = rotations.getOrDefault(planet.id(), 0.0f) + planet.rotationSpeed();
         rotations.put(planet.id(), rotation);
@@ -111,22 +133,42 @@ public class PlanetRenderer {
 
         Vector3f lookVector = new Vector3f(camera.getLookVector());
         Vector3f upVector   = new Vector3f(camera.getUpVector());
-        Matrix4f rotationOnlyView = new Matrix4f().setLookAt(0, 0, 0, lookVector.x, lookVector.y, lookVector.z, upVector.x, upVector.y, upVector.z);
+        Matrix4f rotationOnlyView = new Matrix4f().setLookAt(
+                0, 0, 0,
+                lookVector.x, lookVector.y, lookVector.z,
+                upVector.x, upVector.y, upVector.z
+        );
 
         Vector4f spherePosView  = new Vector4f(relativePos, 1.0f).mul(rotationOnlyView);
         Matrix4f invProj        = new Matrix4f(projectionMatrix).invert();
         Matrix4f invView        = new Matrix4f(rotationOnlyView).invert();
-        Matrix4f planetRotation = new Matrix4f().rotateY(rotation);
+        Matrix4f planetRotation;
+        if (planet.id().equals("earth_moon")) {
+            // Місяць завжди однією стороною до камери
+            Vector3f toCamera = new Vector3f(-relativePos.x, -relativePos.y, -relativePos.z).normalize();
+            Vector3f up = new Vector3f(0, 1, 0);
+            Vector3f right = new Vector3f(toCamera).cross(up).normalize();
+            Vector3f correctedUp = new Vector3f(right).cross(toCamera).normalize();
+            planetRotation = new Matrix4f(
+                    right.x,       right.y,       right.z,       0,
+                    correctedUp.x, correctedUp.y, correctedUp.z, 0,
+                    toCamera.x,    toCamera.y,    toCamera.z,    0,
+                    0,             0,             0,             1
+            );
+        } else {
+            planetRotation = new Matrix4f().rotateY(rotation);
+        }
 
-        setUniformVec3(shader, "uSpherePos", -spherePosView.x, -spherePosView.y, -spherePosView.z);
-        setUniformFloat(shader, "uScale", planet.radius());
-        setUniformMat4(shader, "uInvProj", invProj);
-        setUniformMat4(shader, "uInvView", invView);
-        setUniformMat4(shader, "uPlanetRotation", planetRotation);
-        setUniformFloat(shader, "uTime", rotation * 0.5f);
-        setUniformFloat(shader, "uPlasmaTime", (System.currentTimeMillis() % 1000000) / 1000.0f);
-        setUniformVec3(shader, "uSpherePosWorld", relativePos.x, relativePos.y, relativePos.z);
+        setUniformVec3(shader,  "uSpherePos",      -spherePosView.x, -spherePosView.y, -spherePosView.z);
+        setUniformFloat(shader, "uScale",          planet.radius());
+        setUniformMat4(shader,  "uInvProj",        invProj);
+        setUniformMat4(shader,  "uInvView",        invView);
+        setUniformMat4(shader,  "uPlanetRotation", planetRotation);
+        setUniformFloat(shader, "uTime",           rotation * 0.5f);
+        setUniformFloat(shader, "uPlasmaTime",     (System.currentTimeMillis() % 1000000) / 1000.0f);
+        setUniformVec3(shader,  "uSpherePosWorld", relativePos.x, relativePos.y, relativePos.z);
 
+        // Напрямок сонця
         Vector3f sunPos = getSunPosition();
         Vector3f sunDir = sunPos != null
                 ? new Vector3f(
@@ -137,11 +179,23 @@ public class PlanetRenderer {
                 : new Vector3f(planet.sun().x(), planet.sun().y(), planet.sun().z()).normalize();
         setUniformVec3(shader, "uSunDir", sunDir.x, sunDir.y, sunDir.z);
 
-        setUniformFloat(shader, "uHasClouds", planet.cloudTexture() != null ? 1.0f : 0.0f);
+        // Для місяця — передаємо фазу
+        if (planet.id().equals("earth_moon")) {
+            Minecraft mc = Minecraft.getInstance();
+            int moonPhase = mc.level != null ? mc.level.getMoonPhase() : 0;
+            // 0 = повний місяць, 4 = новий місяць
+            // Конвертуємо в кут зміщення освітлення
+            float phaseAngle = (moonPhase / 8.0f) * (float)(Math.PI * 2.0);
+            setUniformFloat(shader, "uMoonPhaseAngle", phaseAngle);
+        } else {
+            setUniformFloat(shader, "uMoonPhaseAngle", 0.0f);
+        }
+
+        setUniformFloat(shader, "uHasClouds",  planet.cloudTexture() != null ? 1.0f : 0.0f);
         setUniformFloat(shader, "uCloudSpeed", planet.cloudSpeed());
 
-        setUniformFloat(shader, "uIsStar", planet.isStar() ? 1.0f : 0.0f);
-        setUniformVec3(shader, "uStarColor", 1.0f, 0.9f, 0.6f);
+        setUniformFloat(shader, "uIsStar",    planet.isStar() ? 1.0f : 0.0f);
+        setUniformVec3(shader,  "uStarColor", 1.0f, 0.9f, 0.6f);
 
         setUniformFloat(shader, "uPlasmaSpeed",      0.3f);
         setUniformFloat(shader, "uPlasmaScale",      3.0f);
@@ -149,11 +203,12 @@ public class PlanetRenderer {
 
         PlanetConfig.AtmosphereConfig atm = planet.atmosphere();
         float atmRadiusMult = planet.isStar() ? 6.0f : atm.radius();
-        float atmRadius = planet.radius() * atmRadiusMult;
-        setUniformFloat(shader, "uAtmosphereRadius", atmRadius);
-        setUniformVec3(shader, "uRayleighCoeff", atm.rayleighR(), atm.rayleighG(), atm.rayleighB());
-        setUniformFloat(shader, "uMieCoeff", atm.mie());
+        float atmRadius     = planet.radius() * atmRadiusMult;
+        setUniformFloat(shader, "uAtmosphereRadius",   atmRadius);
+        setUniformVec3(shader,  "uRayleighCoeff",      atm.rayleighR(), atm.rayleighG(), atm.rayleighB());
+        setUniformFloat(shader, "uMieCoeff",           atm.mie());
         setUniformFloat(shader, "uAtmosphereStrength", atm.strength());
+        setUniformFloat(shader, "uAlpha", planet.alpha());
 
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);
@@ -180,24 +235,10 @@ public class PlanetRenderer {
         if (planet.cloudTexture() != null) {
             GlStateManager._bindTexture(tm.getTexture(ResourceLocation.parse(planet.cloudTexture())).getId());
         }
-
         GlStateManager._activeTexture(GL13.GL_TEXTURE0);
 
         BufferUploader.drawWithShader(buf.buildOrThrow());
         ShaderProgram.unbind();
-    }
-
-    private static void setUniformVec3(ShaderProgram s, String name, float x, float y, float z) {
-        var u = s.getUniform(name); if (u != null) u.setVector(x, y, z);
-    }
-    private static void setUniformFloat(ShaderProgram s, String name, float v) {
-        var u = s.getUniform(name); if (u != null) u.setFloat(v);
-    }
-    private static void setUniformMat4(ShaderProgram s, String name, Matrix4f m) {
-        var u = s.getUniform(name); if (u != null) u.setMatrix(m);
-    }
-    private static void setUniformInt(ShaderProgram s, String name, int v) {
-        var u = s.getUniform(name); if (u != null) u.setInt(v);
     }
 
     private static void renderRing(PlanetConfig planet, Matrix4f projectionMatrix, Camera camera) {
@@ -215,48 +256,40 @@ public class PlanetRenderer {
 
         Vector3f lookVector = new Vector3f(camera.getLookVector());
         Vector3f upVector   = new Vector3f(camera.getUpVector());
-
-        // Матриця повороту камери
         Matrix4f rotationOnlyView = new Matrix4f().setLookAt(
                 0, 0, 0,
                 lookVector.x, lookVector.y, lookVector.z,
                 upVector.x, upVector.y, upVector.z
         );
 
-        // Позиція центру планети в просторі камери
         Vector4f spherePosView = new Vector4f(relativePos, 1.0f).mul(rotationOnlyView);
 
-        // ОБЧИСЛЕННЯ НОРМАЛІ КІЛЬЦЯ
-        // Починаємо з вертикалі (локальна вісь Y планети)
         Vector4f ringNormal = new Vector4f(0.0f, 1.0f, 0.0f, 0.0f);
-        // Нахиляємо згідно з конфігом (наприклад, 23 градуси для Сатурна)
         ringNormal.rotateX((float) Math.toRadians(planet.ring().tilt()));
-        // Трансформуємо в простір камери, щоб шейдер бачив нормаль так само, як бачить камеру
         ringNormal.mul(rotationOnlyView);
 
         Matrix4f invProj = new Matrix4f(projectionMatrix).invert();
 
-        // Передаємо уніформи
-        setUniformVec3(shader, "uSpherePos", spherePosView.x, spherePosView.y, spherePosView.z);
-        setUniformVec3(shader, "uRingNormalView", ringNormal.x, ringNormal.y, ringNormal.z);
-        setUniformFloat(shader, "uScale", planet.radius());
-        setUniformMat4(shader, "uInvProj", invProj);
-        setUniformFloat(shader, "uInnerRadius", planet.ring().innerRadius());
-        setUniformFloat(shader, "uOuterRadius", planet.ring().outerRadius());
-        setUniformFloat(shader, "uOpacity", planet.ring().opacity());
-
-        // Сонце для освітлення
         Vector3f sunPos = getSunPosition();
         Vector3f sunDirWorld = sunPos != null
-                ? new Vector3f((float)(sunPos.x - planet.x()), (float)(sunPos.y - planet.y()), (float)(sunPos.z - planet.z())).normalize()
+                ? new Vector3f(
+                (float)(sunPos.x - planet.x()),
+                (float)(sunPos.y - planet.y()),
+                (float)(sunPos.z - planet.z())
+        ).normalize()
                 : new Vector3f(planet.sun().x(), planet.sun().y(), planet.sun().z()).normalize();
 
-// ПЕРЕВОДИМО В VIEW SPACE
-// Використовуємо ту саму rotationOnlyView, що і для нормалі
         Vector4f sunDirView = new Vector4f(sunDirWorld, 0.0f).mul(rotationOnlyView);
-        setUniformVec3(shader, "uSunDirView", sunDirView.x, sunDirView.y, sunDirView.z);
 
-        // Рендер квада на весь екран
+        setUniformVec3(shader,  "uSpherePos",      spherePosView.x, spherePosView.y, spherePosView.z);
+        setUniformVec3(shader,  "uRingNormalView", ringNormal.x, ringNormal.y, ringNormal.z);
+        setUniformFloat(shader, "uScale",          planet.radius());
+        setUniformMat4(shader,  "uInvProj",        invProj);
+        setUniformFloat(shader, "uInnerRadius",    planet.ring().innerRadius());
+        setUniformFloat(shader, "uOuterRadius",    planet.ring().outerRadius());
+        setUniformFloat(shader, "uOpacity",        planet.ring().opacity());
+        setUniformVec3(shader,  "uSunDirView",     sunDirView.x, sunDirView.y, sunDirView.z);
+
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(false);
         RenderSystem.enableBlend();
@@ -278,5 +311,18 @@ public class PlanetRenderer {
         BufferUploader.drawWithShader(buf.buildOrThrow());
         ShaderProgram.unbind();
         RenderSystem.depthMask(true);
+    }
+
+    private static void setUniformVec3(ShaderProgram s, String name, float x, float y, float z) {
+        var u = s.getUniform(name); if (u != null) u.setVector(x, y, z);
+    }
+    private static void setUniformFloat(ShaderProgram s, String name, float v) {
+        var u = s.getUniform(name); if (u != null) u.setFloat(v);
+    }
+    private static void setUniformMat4(ShaderProgram s, String name, Matrix4f m) {
+        var u = s.getUniform(name); if (u != null) u.setMatrix(m);
+    }
+    private static void setUniformInt(ShaderProgram s, String name, int v) {
+        var u = s.getUniform(name); if (u != null) u.setInt(v);
     }
 }

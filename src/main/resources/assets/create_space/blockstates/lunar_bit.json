@@ -1,8 +1,13 @@
 {
   "variants": {
-    "facing=north": { "model": "create_space:block/lunar_bit" },
-    "facing=east":  { "model": "create_space:block/lunar_bit", "y": 90 },
-    "facing=south": { "model": "create_space:block/lunar_bit", "y": 180 },
-    "facing=west":  { "model": "create_space:block/lunar_bit", "y": 270 }
+    "facing=north,variant=0": { "model": "create_space:block/lunar_bit" },
+    "facing=east,variant=0":  { "model": "create_space:block/lunar_bit", "y": 90 },
+    "facing=south,variant=0": { "model": "create_space:block/lunar_bit", "y": 180 },
+    "facing=west,variant=0":  { "model": "create_space:block/lunar_bit", "y": 270 },
+
+    "facing=north,variant=1": { "model": "create_space:block/lunar_bit_v2" },
+    "facing=east,variant=1":  { "model": "create_space:block/lunar_bit_v2", "y": 90 },
+    "facing=south,variant=1": { "model": "create_space:block/lunar_bit_v2", "y": 180 },
+    "facing=west,variant=1":  { "model": "create_space:block/lunar_bit_v2", "y": 270 }
   }
 }

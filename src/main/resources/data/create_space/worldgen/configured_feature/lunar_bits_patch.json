@@ -11,34 +11,15 @@
           "to_place": {
             "type": "minecraft:weighted_state_provider",
             "entries": [
-              {
-                "weight": 1,
-                "data": {
-                  "Name": "create_space:lunar_bit",
-                  "Properties": { "facing": "north" }
-                }
-              },
-              {
-                "weight": 1,
-                "data": {
-                  "Name": "create_space:lunar_bit",
-                  "Properties": { "facing": "south" }
-                }
-              },
-              {
-                "weight": 1,
-                "data": {
-                  "Name": "create_space:lunar_bit",
-                  "Properties": { "facing": "east" }
-                }
-              },
-              {
-                "weight": 1,
-                "data": {
-                  "Name": "create_space:lunar_bit",
-                  "Properties": { "facing": "west" }
-                }
-              }
+              { "weight": 1, "data": { "Name": "create_space:lunar_bit", "Properties": { "facing": "north", "variant": "0" } } },
+              { "weight": 1, "data": { "Name": "create_space:lunar_bit", "Properties": { "facing": "south", "variant": "0" } } },
+              { "weight": 1, "data": { "Name": "create_space:lunar_bit", "Properties": { "facing": "east", "variant": "0" } } },
+              { "weight": 1, "data": { "Name": "create_space:lunar_bit", "Properties": { "facing": "west", "variant": "0" } } },
+
+              { "weight": 1, "data": { "Name": "create_space:lunar_bit", "Properties": { "facing": "north", "variant": "1" } } },
+              { "weight": 1, "data": { "Name": "create_space:lunar_bit", "Properties": { "facing": "south", "variant": "1" } } },
+              { "weight": 1, "data": { "Name": "create_space:lunar_bit", "Properties": { "facing": "east", "variant": "1" } } },
+              { "weight": 1, "data": { "Name": "create_space:lunar_bit", "Properties": { "facing": "west", "variant": "1" } } }
             ]
           }
         }
