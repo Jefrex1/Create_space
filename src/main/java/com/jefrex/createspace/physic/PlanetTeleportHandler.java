@@ -20,12 +20,15 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.DoubleTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -48,11 +51,32 @@ public class PlanetTeleportHandler {
 
     record PlotBlock(BlockPos plotPos, BlockState state, CompoundTag nbt) {}
     record PlotEntity(UUID oldUUID, CompoundTag nbt, double dx, double dy, double dz) {}
+    record UnfreezeTask(Map<UUID, Entity> entities, ServerLevel plotLevel) {}
+
+    private static final Map<Long, UnfreezeTask> pendingUnfreeze = new HashMap<>();
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         var server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
+
+        // --- Розморозка entities ---
+        long currentTick = server.getTickCount();
+        Iterator<Map.Entry<Long, UnfreezeTask>> unfreezeIt = pendingUnfreeze.entrySet().iterator();
+        while (unfreezeIt.hasNext()) {
+            var entry = unfreezeIt.next();
+            if (currentTick >= entry.getKey()) {
+                for (Entity e : entry.getValue().entities().values()) {
+                    if (!e.isRemoved()) {
+                        if (e instanceof Mob mob) {
+                            mob.setNoAi(false);
+                        }
+                        e.setDeltaMovement(0, 0, 0);
+                    }
+                }
+                unfreezeIt.remove();
+            }
+        }
 
         cooldowns.replaceAll((uuid, ticks) -> ticks - 1);
         cooldowns.values().removeIf(t -> t <= 0);
@@ -63,7 +87,7 @@ public class PlanetTeleportHandler {
                 if (cooldowns.containsKey(player.getUUID())) continue;
 
                 // ============================================================
-                // --- Вхід у планету (з overworld/space у planet dimension) ---
+                // --- Вхід у планету ---
                 // ============================================================
                 for (PlanetConfig planet : PlanetRegistry.getPlanets()) {
                     if (planet.dimension() == null) continue;
@@ -82,7 +106,6 @@ public class PlanetTeleportHandler {
                     SubLevel trackingSubLevel = Sable.HELPER.getTrackingSubLevel(player);
 
                     if (trackingSubLevel instanceof ServerSubLevel serverSubLevel) {
-                        // Гравець на суб-рівні — переносимо його разом з кораблем
                         UUID subLevelId = serverSubLevel.getUniqueId();
                         if (teleportedSubLevels.contains(subLevelId)) {
                             cooldowns.put(player.getUUID(), COOLDOWN_TICKS);
@@ -92,16 +115,12 @@ public class PlanetTeleportHandler {
 
                         var spawnPos = targetLevel.getSharedSpawnPos();
                         double spawnX = spawnPos.getX() + 0.5;
-                        double spawnY = 900;
+                        double spawnY = 200; // безпечна висота в межах будь-якого dimension
                         double spawnZ = spawnPos.getZ() + 0.5;
 
-                        transferSubLevel(
-                                server, level, targetLevel,
-                                serverSubLevel, player,
-                                spawnX, spawnY, spawnZ
-                        );
+                        transferSubLevel(server, level, targetLevel,
+                                serverSubLevel, player, spawnX, spawnY, spawnZ);
                     } else {
-                        // Гравець без корабля
                         var spawnPos = targetLevel.getSharedSpawnPos();
                         player.teleportTo(targetLevel,
                                 spawnPos.getX() + 0.5, 900, spawnPos.getZ() + 0.5,
@@ -114,7 +133,7 @@ public class PlanetTeleportHandler {
                 if (cooldowns.containsKey(player.getUUID())) continue;
 
                 // ============================================================
-                // --- Вихід з планети (вгору на Y>1000 → space)            ---
+                // --- Вихід з планети (Y > 1000 → space) ---
                 // ============================================================
                 if (player.getY() > 1000) {
                     String originId = playerOriginPlanet.get(player.getUUID());
@@ -145,11 +164,8 @@ public class PlanetTeleportHandler {
                         }
                         teleportedSubLevels.add(subLevelId);
 
-                        transferSubLevel(
-                                server, level, spaceLevel,
-                                serverSubLevel, player,
-                                spawnX, spawnY, spawnZ
-                        );
+                        transferSubLevel(server, level, spaceLevel,
+                                serverSubLevel, player, spawnX, spawnY, spawnZ);
                     } else {
                         player.teleportTo(spaceLevel, spawnX, spawnY, spawnZ,
                                 player.getYRot(), player.getXRot());
@@ -161,12 +177,8 @@ public class PlanetTeleportHandler {
         }
     }
 
-    /**
-     * Переносить суб-рівень (корабель) з одного виміру в інший,
-     * разом з екіпажем та entities.
-     */
     private static void transferSubLevel(
-            net.minecraft.server.MinecraftServer server,
+            MinecraftServer server,
             ServerLevel fromLevel,
             ServerLevel toLevel,
             ServerSubLevel serverSubLevel,
@@ -252,7 +264,8 @@ public class PlanetTeleportHandler {
 
         // --- Збираємо entities з plot ---
         List<PlotEntity> plotEntities = new ArrayList<>();
-        Map<UUID, UUID> vehicleToPassenger = new HashMap<>(); // vehicleUUID -> playerUUID
+        Map<UUID, UUID> vehicleToPassenger = new HashMap<>(); // vehicleUUID -> playerUUID (для гравців)
+        Map<UUID, List<UUID>> vehicleToEntityPassengers = new HashMap<>(); // vehicleUUID -> [entityUUID]
 
         if (plotMinX != Integer.MAX_VALUE) {
             AABB plotAABB = new AABB(plotMinX, plotMinY, plotMinZ,
@@ -261,6 +274,7 @@ public class PlanetTeleportHandler {
                     e -> !(e instanceof ServerPlayer));
 
             for (Entity e : entitiesInPlot) {
+                // Запам'ятовуємо гравців-пасажирів
                 for (ServerPlayer member : crew) {
                     if (member.getVehicle() != null &&
                             member.getVehicle().getUUID().equals(e.getUUID())) {
@@ -269,8 +283,24 @@ public class PlanetTeleportHandler {
                     }
                 }
 
+                // Збираємо vehicle→entity passenger зв'язки з NBT
                 CompoundTag nbt = new CompoundTag();
                 e.save(nbt);
+
+                if (nbt.contains("Passengers")) {
+                    ListTag passengersList = nbt.getList("Passengers", 10);
+                    List<UUID> passengerUUIDs = new ArrayList<>();
+                    for (int i = 0; i < passengersList.size(); i++) {
+                        CompoundTag passengerNbt = passengersList.getCompound(i);
+                        if (passengerNbt.contains("UUID")) {
+                            UUID passengerUUID = NbtUtils.loadUUID(passengerNbt.get("UUID"));
+                            passengerUUIDs.add(passengerUUID);
+                        }
+                    }
+                    if (!passengerUUIDs.isEmpty()) {
+                        vehicleToEntityPassengers.put(e.getUUID(), passengerUUIDs);
+                    }
+                }
 
                 double edx = e.getX() - plotCenter.getX();
                 double edy = e.getY() - plotCenter.getY();
@@ -281,7 +311,7 @@ public class PlanetTeleportHandler {
             }
         }
 
-        // --- Корабель порожній — просто телепортуємо гравців ---
+        // --- Корабель порожній ---
         if (plotBlocks.isEmpty()) {
             container.removeSubLevel(serverSubLevel, SubLevelRemovalReason.REMOVED);
             for (ServerPlayer member : crew) {
@@ -365,9 +395,25 @@ public class PlanetTeleportHandler {
         ServerLevel newPlotLevel = (ServerLevel) newPlot.getSubLevel().getLevel();
         BlockPos newPlotCenter = newPlot.getCenterBlock();
 
+        // oldUUID -> новий Entity
         Map<UUID, Entity> spawnedEntities = new HashMap<>();
 
+        // Спавнимо vehicles першими, потім решту
+        List<PlotEntity> vehicles = new ArrayList<>();
+        List<PlotEntity> nonVehicles = new ArrayList<>();
         for (PlotEntity pe : plotEntities) {
+            if (vehicleToEntityPassengers.containsKey(pe.oldUUID())) {
+                vehicles.add(pe);
+            } else {
+                nonVehicles.add(pe);
+            }
+        }
+
+        List<PlotEntity> spawnOrder = new ArrayList<>();
+        spawnOrder.addAll(vehicles);
+        spawnOrder.addAll(nonVehicles);
+
+        for (PlotEntity pe : spawnOrder) {
             CompoundTag tag = pe.nbt().copy();
 
             double newEX = newPlotCenter.getX() + pe.dx();
@@ -375,16 +421,39 @@ public class PlanetTeleportHandler {
             double newEZ = newPlotCenter.getZ() + pe.dz();
 
             tag.remove("UUID");
+            tag.remove("Passengers"); // відновимо вручну
+
             ListTag posList = new ListTag();
             posList.add(DoubleTag.valueOf(newEX));
             posList.add(DoubleTag.valueOf(newEY));
             posList.add(DoubleTag.valueOf(newEZ));
             tag.put("Pos", posList);
 
+            // Заморожуємо
+            tag.putBoolean("NoAI", true);
+            ListTag motionTag = new ListTag();
+            motionTag.add(DoubleTag.valueOf(0));
+            motionTag.add(DoubleTag.valueOf(0));
+            motionTag.add(DoubleTag.valueOf(0));
+            tag.put("Motion", motionTag);
+
             EntityType.create(tag, newPlotLevel).ifPresent(e -> {
                 newPlotLevel.addFreshEntity(e);
+                e.setDeltaMovement(0, 0, 0);
                 spawnedEntities.put(pe.oldUUID(), e);
             });
+        }
+
+        // --- Відновлюємо vehicle→entity passenger зв'язки ---
+        for (Map.Entry<UUID, List<UUID>> entry : vehicleToEntityPassengers.entrySet()) {
+            Entity vehicle = spawnedEntities.get(entry.getKey());
+            if (vehicle == null) continue;
+            for (UUID passengerOldUUID : entry.getValue()) {
+                Entity passenger = spawnedEntities.get(passengerOldUUID);
+                if (passenger != null) {
+                    passenger.startRiding(vehicle, true);
+                }
+            }
         }
 
         // --- Телепортуємо екіпаж ---
@@ -396,7 +465,7 @@ public class PlanetTeleportHandler {
             playerOriginPlanet.remove(member.getUUID());
             cooldowns.put(member.getUUID(), COOLDOWN_TICKS);
 
-            // Пересаджуємо на vehicle
+            // Пересаджуємо гравця на vehicle якщо треба
             for (Map.Entry<UUID, UUID> entry : vehicleToPassenger.entrySet()) {
                 if (entry.getValue().equals(member.getUUID())) {
                     Entity newVehicle = spawnedEntities.get(entry.getKey());
@@ -407,5 +476,8 @@ public class PlanetTeleportHandler {
                 }
             }
         }
+
+        // --- Розморозка через 10 тіків ---
+        pendingUnfreeze.put((long) server.getTickCount() + 10, new UnfreezeTask(spawnedEntities, newPlotLevel));
     }
 }
