@@ -32,13 +32,11 @@ public class MeteoriteEvent {
         MinecraftServer server = event.getServer();
 
         for (ServerLevel level : server.getAllLevels()) {
-            // Тільки в overworld і тільки якщо йде дощ
-            if (!level.dimension().equals(Level.OVERWORLD)) continue;
+            //if (!level.dimension().equals(Level.OVERWORLD)) continue;
             if (!level.isRaining()) continue;
 
             if (level.random.nextInt(CHANCE) != 0) continue;
 
-            // Вибираємо випадкового гравця як ціль
             List<ServerPlayer> players = level.players();
             if (players.isEmpty()) continue;
 
@@ -47,7 +45,6 @@ public class MeteoriteEvent {
         }
     }
 
-    // Замість spawnFireball — спавнимо ентіті:
     private static void spawnMeteorite(ServerLevel level, ServerPlayer target) {
         int offsetX = level.random.nextInt(128) - 64;
         int offsetZ = level.random.nextInt(128) - 64;
@@ -57,7 +54,6 @@ public class MeteoriteEvent {
 
         BlockPos impactPos = new BlockPos(x, y, z);
 
-        // Спавнимо кастомну ентіті
         MeteoriteEntity meteorite = new MeteoriteEntity(level, impactPos);
         level.addFreshEntity(meteorite);
 
@@ -68,7 +64,6 @@ public class MeteoriteEvent {
     }
 
     private static void spawnFireball(ServerLevel level, BlockPos targetPos) {
-        // Просто робимо вибух і кладемо блоки — без ентіті
         level.explode(
                 null,
                 targetPos.getX() + 0.5,
@@ -78,24 +73,20 @@ public class MeteoriteEvent {
                 Level.ExplosionInteraction.TNT
         );
 
-        // Кладемо обсидіан як кратер
         level.setBlock(targetPos, Blocks.OBSIDIAN.defaultBlockState(), 3);
 
-        // Звук удару
         level.playSound(null, targetPos, SoundEvents.GENERIC_EXPLODE.value(),
                 SoundSource.BLOCKS, 2.0f, 0.8f);
     }
 
     private static void placeMeteorite(ServerLevel level, BlockPos pos) {
-        // Кладемо невеликий кратер з обсидіану + блок заліза як "метеорит"
         level.setBlock(pos, Blocks.OBSIDIAN.defaultBlockState(), 3);
         level.setBlock(pos.above(), Blocks.IRON_ORE.defaultBlockState(), 3);
 
-        // Вибух для ефекту
         level.explode(
                 null,
                 pos.getX(), pos.getY(), pos.getZ(),
-                4.0f, // радіус
+                4.0f,
                 Level.ExplosionInteraction.TNT
         );
     }

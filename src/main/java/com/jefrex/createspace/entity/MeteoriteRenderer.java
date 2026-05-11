@@ -7,12 +7,11 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import org.joml.Matrix4f;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import org.joml.Matrix3f;
 
 @OnlyIn(Dist.CLIENT)
 public class MeteoriteRenderer extends EntityRenderer<MeteoriteEntity> {
@@ -30,18 +29,16 @@ public class MeteoriteRenderer extends EntityRenderer<MeteoriteEntity> {
 
         poseStack.pushPose();
 
-        // Центруємо і крутимо
+        float s = entity.getMeteorSize(); // береться тут, один раз
+
         poseStack.translate(0, 1, 0);
-        poseStack.mulPose(Axis.ZP.rotationDegrees(35)); // нахил 35 градусів
+        poseStack.mulPose(Axis.ZP.rotationDegrees(35));
         poseStack.mulPose(Axis.YP.rotationDegrees(entity.getYRot() + partialTick * 4));
         poseStack.mulPose(Axis.XP.rotationDegrees(entity.getXRot() + partialTick * 6));
-        poseStack.scale(5.0f, 5.0f, 5.0f); // розмір
+        poseStack.scale(s, s, s); // масштаб вже тут
 
-        VertexConsumer vertexConsumer = buffer.getBuffer(
-                RenderType.entityCutout(TEXTURE)
-        );
+        VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityCutout(TEXTURE));
 
-        // Рендеримо простий квадрат (billboard)
         renderCube(poseStack, vertexConsumer, packedLight);
 
         poseStack.popPose();
@@ -51,55 +48,20 @@ public class MeteoriteRenderer extends EntityRenderer<MeteoriteEntity> {
     private void renderCube(PoseStack poseStack, VertexConsumer consumer, int light) {
         Matrix4f matrix = poseStack.last().pose();
         int overlay = OverlayTexture.NO_OVERLAY;
-        float s = 0.5f;
+        float s = 0.5f; // фіксований розмір грані, масштаб задається через poseStack.scale вище
 
-        // Передня грань
         renderFace(matrix, consumer, overlay, light,
-                -s, -s,  s,
-                s, -s,  s,
-                s,  s,  s,
-                -s,  s,  s,
-                0, 0, 1);
-
-        // Задня грань
+                -s, -s,  s,  s, -s,  s,  s,  s,  s, -s,  s,  s,  0,  0,  1);
         renderFace(matrix, consumer, overlay, light,
-                s, -s, -s,
-                -s, -s, -s,
-                -s,  s, -s,
-                s,  s, -s,
-                0, 0, -1);
-
-        // Ліва грань
+                s, -s, -s, -s, -s, -s, -s,  s, -s,  s,  s, -s,  0,  0, -1);
         renderFace(matrix, consumer, overlay, light,
-                -s, -s, -s,
-                -s, -s,  s,
-                -s,  s,  s,
-                -s,  s, -s,
-                -1, 0, 0);
-
-        // Права грань
+                -s, -s, -s, -s, -s,  s, -s,  s,  s, -s,  s, -s, -1,  0,  0);
         renderFace(matrix, consumer, overlay, light,
-                s, -s,  s,
-                s, -s, -s,
-                s,  s, -s,
-                s,  s,  s,
-                1, 0, 0);
-
-        // Верхня грань
+                s, -s,  s,  s, -s, -s,  s,  s, -s,  s,  s,  s,  1,  0,  0);
         renderFace(matrix, consumer, overlay, light,
-                -s,  s,  s,
-                s,  s,  s,
-                s,  s, -s,
-                -s,  s, -s,
-                0, 1, 0);
-
-        // Нижня грань
+                -s,  s,  s,  s,  s,  s,  s,  s, -s, -s,  s, -s,  0,  1,  0);
         renderFace(matrix, consumer, overlay, light,
-                -s, -s, -s,
-                s, -s, -s,
-                s, -s,  s,
-                -s, -s,  s,
-                0, -1, 0);
+                -s, -s, -s,  s, -s, -s,  s, -s,  s, -s, -s,  s,  0, -1,  0);
     }
 
     private void renderFace(Matrix4f matrix, VertexConsumer consumer, int overlay, int light,
