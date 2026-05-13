@@ -17,13 +17,19 @@ import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.DoubleTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -46,11 +52,12 @@ public class PlanetTeleportHandler {
     private static final int STAGING_SLOT_SIZE = 512;
     private static final AtomicInteger stagingSlotCounter = new AtomicInteger(0);
 
-    private static final Map<UUID, Integer> cooldowns          = new HashMap<>();
-    private static final Map<UUID, String>  playerOriginPlanet = new HashMap<>();
+    private static final Map<UUID, Integer> cooldowns           = new HashMap<>();
+    private static final Map<UUID, String>  playerOriginPlanet  = new HashMap<>();
     private static final Map<UUID, Long>    teleportedSubLevels = new HashMap<>();
 
     record SavedBlock(BlockState state, CompoundTag nbt, int dx, int dy, int dz) {}
+    record SavedEntity(CompoundTag nbt, double relX, double relY, double relZ) {}
 
     // =========================================================================
 
@@ -181,34 +188,37 @@ public class PlanetTeleportHandler {
         RigidBodyHandle handle = container.physicsSystem().getPhysicsHandle(serverSubLevel);
         Vector3d linearVelocity  = Sable.HELPER.getVelocity(
                 fromLevel, serverSubLevel.logicalPose().position(), new Vector3d());
-        Vector3d angularVelocity = handle != null
-                ? new Vector3d(handle.getAngularVelocity()) : new Vector3d();
+        Vector3d angularVelocity = new Vector3d();
+        if (handle != null) handle.getAngularVelocity(angularVelocity);
         Quaterniond orientation  = new Quaterniond(serverSubLevel.logicalPose().orientation());
 
         UUID subLevelId = serverSubLevel.getUniqueId();
-        List<ServerPlayer> crew = collectCrew(server, subLevelId);
-
         Vector3d subCenter = serverSubLevel.logicalPose().position();
-        Map<UUID, double[]> crewOffsets = new HashMap<>();
-        for (ServerPlayer member : crew) {
-            crewOffsets.put(member.getUUID(), new double[]{
-                    member.getX() - subCenter.x,
-                    member.getY() - subCenter.y,
-                    member.getZ() - subCenter.z
+
+        // --- Збираємо всі tracking entities (гравці + моби на палубі) ---
+        List<Entity> allTrackers = collectTrackingEntities(server, subLevelId);
+        Map<UUID, double[]> trackerOffsets = new HashMap<>();
+        for (Entity e : allTrackers) {
+            trackerOffsets.put(e.getUUID(), new double[]{
+                    e.getX() - subCenter.x,
+                    e.getY() - subCenter.y,
+                    e.getZ() - subCenter.z
             });
         }
 
-        // --- Читаємо блоки з plot ---
+        // --- Читаємо блоки і entities з plot ---
         LevelPlot plot        = serverSubLevel.getPlot();
         ServerLevel plotLevel = (ServerLevel) plot.getSubLevel().getLevel();
         BlockPos plotCenter   = plot.getCenterBlock();
 
-        List<SavedBlock> savedBlocks = readPlotBlocks(plotLevel, plot, plotCenter);
+        List<SavedBlock>  savedBlocks    = readPlotBlocks(plotLevel, plot, plotCenter);
+        List<SavedEntity> savedEntities  = readAndDiscardPlotEntities(plotLevel, plot, plotCenter);
 
         if (savedBlocks.isEmpty()) {
             Sable.LOGGER.warn("[PlanetTeleport] SubLevel {} has no blocks", subLevelId);
             container.removeSubLevel(serverSubLevel, SubLevelRemovalReason.REMOVED);
-            teleportCrew(crew, crewOffsets, toLevel, spawnX, spawnY, spawnZ, clearOrigin);
+            teleportAllEntities(allTrackers, trackerOffsets, toLevel,
+                    spawnX, spawnY, spawnZ, clearOrigin);
             return;
         }
 
@@ -219,7 +229,8 @@ public class PlanetTeleportHandler {
         ServerSubLevelContainer toContainer = SubLevelContainer.getContainer(toLevel);
         if (toContainer == null) {
             Sable.LOGGER.error("[PlanetTeleport] No SubLevelContainer for toLevel");
-            teleportCrew(crew, crewOffsets, toLevel, spawnX, spawnY, spawnZ, clearOrigin);
+            teleportAllEntities(allTrackers, trackerOffsets, toLevel,
+                    spawnX, spawnY, spawnZ, clearOrigin);
             return;
         }
 
@@ -276,7 +287,8 @@ public class PlanetTeleportHandler {
         } catch (Exception e) {
             Sable.LOGGER.error("[PlanetTeleport] assembleBlocks failed", e);
             cleanupStaging(toLevel, stagingPositions);
-            teleportCrew(crew, crewOffsets, toLevel, spawnX, spawnY, spawnZ, clearOrigin);
+            teleportAllEntities(allTrackers, trackerOffsets, toLevel,
+                    spawnX, spawnY, spawnZ, clearOrigin);
             return;
         }
 
@@ -286,8 +298,128 @@ public class PlanetTeleportHandler {
         newSubLevel.updateLastPose();
         toPipeline.addLinearAndAngularVelocity(newSubLevel, linearVelocity, angularVelocity);
 
-        // --- Телепортуємо екіпаж ---
-        teleportCrew(crew, crewOffsets, toLevel, spawnX, spawnY, spawnZ, clearOrigin);
+        // --- Відновлюємо entities з plot у новому sub-level ---
+        BlockPos newPlotCenter = newSubLevel.getPlot().getCenterBlock();
+        spawnPlotEntities(toLevel, savedEntities, plotCenter, newPlotCenter);
+
+        // --- Телепортуємо всі tracking entities ---
+        teleportAllEntities(allTrackers, trackerOffsets, toLevel,
+                spawnX, spawnY, spawnZ, clearOrigin);
+    }
+
+    // =========================================================================
+
+    /**
+     * Збирає всі entities (гравці і моби) що tracking даний sub-level.
+     */
+    private static List<Entity> collectTrackingEntities(MinecraftServer server, UUID subLevelId) {
+        List<Entity> result = new ArrayList<>();
+        for (ServerLevel lvl : server.getAllLevels()) {
+            for (Entity entity : lvl.getAllEntities()) {
+                SubLevel sub = Sable.HELPER.getTrackingSubLevel(entity);
+                if (sub != null && sub.getUniqueId().equals(subLevelId)) {
+                    result.add(entity);
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Зчитує entities з plot'у sub-level'у (тобто entities ВСЕРЕДИНІ корабля),
+     * зберігає їх NBT + відносну позицію від центру plot'у, і дискардить їх зі старого рівня.
+     * Гравців пропускає — вони телепортуються окремо як trackers.
+     */
+    private static List<SavedEntity> readAndDiscardPlotEntities(
+            ServerLevel plotLevel, LevelPlot plot, BlockPos plotCenter
+    ) {
+        List<SavedEntity> saved = new ArrayList<>();
+        Set<UUID> seen = new HashSet<>();
+
+        for (PlotChunkHolder holder : plot.getLoadedChunks()) {
+            var chunk = holder.getChunk();
+            if (chunk == null) continue;
+
+            var cp = chunk.getPos();
+            AABB chunkBounds = new AABB(
+                    cp.getMinBlockX(), plotLevel.getMinBuildHeight(), cp.getMinBlockZ(),
+                    cp.getMaxBlockX() + 1, plotLevel.getMaxBuildHeight(), cp.getMinBlockZ() + 1
+            );
+
+            List<Entity> entities = plotLevel.getEntities((Entity) null, chunkBounds,
+                    e -> !(e instanceof Player) && seen.add(e.getUUID()));
+
+            for (Entity entity : entities) {
+                CompoundTag tag = new CompoundTag();
+                if (!entity.save(tag)) continue; // деякі entities не серіалізуються
+
+                saved.add(new SavedEntity(
+                        tag,
+                        entity.getX() - plotCenter.getX(),
+                        entity.getY() - plotCenter.getY(),
+                        entity.getZ() - plotCenter.getZ()
+                ));
+                entity.discard();
+            }
+        }
+        return saved;
+    }
+
+    /**
+     * Відтворює збережені plot-entities у новому plot'і після assembleBlocks.
+     */
+    private static void spawnPlotEntities(
+            ServerLevel toLevel,
+            List<SavedEntity> entities,
+            BlockPos oldPlotCenter,
+            BlockPos newPlotCenter
+    ) {
+
+        for (SavedEntity se : entities) {
+            CompoundTag tag = se.nbt().copy();
+
+            // Оновлюємо позицію в NBT
+            ListTag posList = new ListTag();
+            posList.add(DoubleTag.valueOf(se.relX() + newPlotCenter.getX()));
+            posList.add(DoubleTag.valueOf(se.relY() + newPlotCenter.getY()));
+            posList.add(DoubleTag.valueOf(se.relZ() + newPlotCenter.getZ()));
+            tag.put("Pos", posList);
+
+            // Скидаємо UUID щоб уникнути конфліктів з оригінальною entity
+            tag.remove("UUID");
+
+            EntityType.create(tag, toLevel)
+                    .ifPresent(toLevel::addFreshEntityWithPassengers);
+        }
+    }
+
+    /**
+     * Телепортує всіх tracking entities (гравців і мобів) у toLevel з відповідними офсетами.
+     */
+    private static void teleportAllEntities(
+            List<Entity> trackers,
+            Map<UUID, double[]> offsets,
+            ServerLevel toLevel,
+            double spawnX, double spawnY, double spawnZ,
+            boolean clearOrigin
+    ) {
+        for (Entity entity : trackers) {
+            double[] offset = offsets.getOrDefault(entity.getUUID(), new double[]{0, 0, 0});
+            double tx = spawnX + offset[0];
+            double ty = spawnY + offset[1];
+            double tz = spawnZ + offset[2];
+
+            if (entity instanceof ServerPlayer player) {
+                player.teleportTo(toLevel, tx, ty, tz,
+                        player.getYRot(), player.getXRot());
+                if (clearOrigin) playerOriginPlanet.remove(player.getUUID());
+                cooldowns.put(player.getUUID(), COOLDOWN_TICKS);
+            } else {
+                // Для звичайних entities — teleportTo з dimension change
+                entity.teleportTo(toLevel, tx, ty, tz, Set.of(),
+                        entity.getYRot(), entity.getXRot());
+            }
+        }
     }
 
     // =========================================================================
@@ -297,18 +429,6 @@ public class PlanetTeleportHandler {
             try { level.removeBlock(pos, false); }
             catch (Exception ignored) {}
         }
-    }
-
-    private static List<ServerPlayer> collectCrew(MinecraftServer server, UUID subLevelId) {
-        List<ServerPlayer> crew = new ArrayList<>();
-        for (ServerLevel lvl : server.getAllLevels()) {
-            for (ServerPlayer other : lvl.players()) {
-                SubLevel otherSub = Sable.HELPER.getTrackingSubLevel(other);
-                if (otherSub != null && otherSub.getUniqueId().equals(subLevelId))
-                    crew.add(other);
-            }
-        }
-        return crew;
     }
 
     private static List<SavedBlock> readPlotBlocks(
@@ -342,24 +462,5 @@ public class PlanetTeleportHandler {
             }
         }
         return blocks;
-    }
-
-    private static void teleportCrew(
-            List<ServerPlayer> crew,
-            Map<UUID, double[]> offsets,
-            ServerLevel toLevel,
-            double spawnX, double spawnY, double spawnZ,
-            boolean clearOrigin
-    ) {
-        for (ServerPlayer member : crew) {
-            double[] offset = offsets.getOrDefault(member.getUUID(), new double[]{0, 0, 0});
-            member.teleportTo(toLevel,
-                    spawnX + offset[0],
-                    spawnY + offset[1],
-                    spawnZ + offset[2],
-                    member.getYRot(), member.getXRot());
-            if (clearOrigin) playerOriginPlanet.remove(member.getUUID());
-            cooldowns.put(member.getUUID(), COOLDOWN_TICKS);
-        }
     }
 }
