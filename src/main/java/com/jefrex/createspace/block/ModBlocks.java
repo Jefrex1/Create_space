@@ -50,6 +50,18 @@ public class ModBlocks {
     public static final DeferredItem<BlockItem> LUNAR_BIT_ITEM =
             ITEMS.registerSimpleBlockItem("lunar_bit", LUNAR_BIT);
 
+    public static final DeferredBlock<Block> CHEREMSHA =
+            BLOCKS.register("cheremsha", CheremshaBlock::new);
+
+    public static final DeferredItem<BlockItem> CHEREMSHA_ITEM =
+            ITEMS.registerSimpleBlockItem("cheremsha", CHEREMSHA);
+
+    public static final DeferredBlock<Block> BRDISH =
+            BLOCKS.register("brdish", CheremshaBlock::new);
+
+    public static final DeferredItem<BlockItem> BRDISH_ITEM =
+            ITEMS.registerSimpleBlockItem("brdish", BRDISH);
+
     public static void register(IEventBus eventBus) {
         BLOCKS.register(eventBus);
         ITEMS.register(eventBus);

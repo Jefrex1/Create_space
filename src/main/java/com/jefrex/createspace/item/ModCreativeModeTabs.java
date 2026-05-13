@@ -24,6 +24,8 @@ public class ModCreativeModeTabs {
                         output.accept(ModBlocks.AIR_FIELD);
                         output.accept(ModBlocks.REGOLITH);
                         output.accept(ModBlocks.LUNAR_BIT);
+                        output.accept(ModBlocks.CHEREMSHA);
+                        output.accept(ModBlocks.BRDISH);
                     }).build());
 
     public static void register(IEventBus eventBus) {
