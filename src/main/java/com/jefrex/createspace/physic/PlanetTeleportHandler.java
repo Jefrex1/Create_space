@@ -17,8 +17,8 @@ import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.DoubleTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -57,7 +57,9 @@ public class PlanetTeleportHandler {
     private static final Map<UUID, Long>    teleportedSubLevels = new HashMap<>();
 
     record SavedBlock(BlockState state, CompoundTag nbt, int dx, int dy, int dz) {}
-    record SavedEntity(CompoundTag nbt, double relX, double relY, double relZ) {}
+
+    // absPlotX/Y/Z — абсолютна позиція entity у plotLevel до телепортації
+    record SavedEntity(CompoundTag nbt, double absPlotX, double absPlotY, double absPlotZ) {}
 
     // =========================================================================
 
@@ -209,10 +211,13 @@ public class PlanetTeleportHandler {
         // --- Читаємо блоки і entities з plot ---
         LevelPlot plot        = serverSubLevel.getPlot();
         ServerLevel plotLevel = (ServerLevel) plot.getSubLevel().getLevel();
-        BlockPos plotCenter   = plot.getCenterBlock();
+        BlockPos oldPlotCenter = plot.getCenterBlock();
 
-        List<SavedBlock>  savedBlocks    = readPlotBlocks(plotLevel, plot, plotCenter);
-        List<SavedEntity> savedEntities  = readAndDiscardPlotEntities(plotLevel, plot, plotCenter);
+        List<SavedBlock>  savedBlocks   = readPlotBlocks(plotLevel, plot, oldPlotCenter);
+        List<SavedEntity> savedEntities = readAndDiscardPlotEntities(plotLevel, plot);
+
+        Sable.LOGGER.info("[PlanetTeleport] SubLevel {}: {} blocks, {} plot-entities",
+                subLevelId, savedBlocks.size(), savedEntities.size());
 
         if (savedBlocks.isEmpty()) {
             Sable.LOGGER.warn("[PlanetTeleport] SubLevel {} has no blocks", subLevelId);
@@ -298,9 +303,9 @@ public class PlanetTeleportHandler {
         newSubLevel.updateLastPose();
         toPipeline.addLinearAndAngularVelocity(newSubLevel, linearVelocity, angularVelocity);
 
-        // --- Відновлюємо entities з plot у новому sub-level ---
+        // --- Відновлюємо plot-entities у новому sub-level ---
         BlockPos newPlotCenter = newSubLevel.getPlot().getCenterBlock();
-        spawnPlotEntities(toLevel, savedEntities, plotCenter, newPlotCenter);
+        spawnPlotEntities(toLevel, savedEntities, oldPlotCenter, newPlotCenter);
 
         // --- Телепортуємо всі tracking entities ---
         teleportAllEntities(allTrackers, trackerOffsets, toLevel,
@@ -310,7 +315,7 @@ public class PlanetTeleportHandler {
     // =========================================================================
 
     /**
-     * Збирає всі entities (гравці і моби) що tracking даний sub-level.
+     * Збирає всі entities що tracking даний sub-level (гравці і моби на палубі).
      */
     private static List<Entity> collectTrackingEntities(MinecraftServer server, UUID subLevelId) {
         List<Entity> result = new ArrayList<>();
@@ -326,12 +331,12 @@ public class PlanetTeleportHandler {
     }
 
     /**
-     * Зчитує entities з plot'у sub-level'у (тобто entities ВСЕРЕДИНІ корабля),
-     * зберігає їх NBT + відносну позицію від центру plot'у, і дискардить їх зі старого рівня.
+     * Зчитує entities з plot'у (всередині корабля), зберігає їх абсолютну позицію
+     * у plotLevel, і дискардить їх зі старого рівня.
      * Гравців пропускає — вони телепортуються окремо як trackers.
      */
     private static List<SavedEntity> readAndDiscardPlotEntities(
-            ServerLevel plotLevel, LevelPlot plot, BlockPos plotCenter
+            ServerLevel plotLevel, LevelPlot plot
     ) {
         List<SavedEntity> saved = new ArrayList<>();
         Set<UUID> seen = new HashSet<>();
@@ -341,9 +346,10 @@ public class PlanetTeleportHandler {
             if (chunk == null) continue;
 
             var cp = chunk.getPos();
+            // Виправлений AABB — використовуємо maxBlockZ, не minBlockZ
             AABB chunkBounds = new AABB(
                     cp.getMinBlockX(), plotLevel.getMinBuildHeight(), cp.getMinBlockZ(),
-                    cp.getMaxBlockX() + 1, plotLevel.getMaxBuildHeight(), cp.getMinBlockZ() + 1
+                    cp.getMaxBlockX() + 1, plotLevel.getMaxBuildHeight(), cp.getMaxBlockZ() + 1
             );
 
             List<Entity> entities = plotLevel.getEntities((Entity) null, chunkBounds,
@@ -351,13 +357,14 @@ public class PlanetTeleportHandler {
 
             for (Entity entity : entities) {
                 CompoundTag tag = new CompoundTag();
-                if (!entity.save(tag)) continue; // деякі entities не серіалізуються
+                if (!entity.save(tag)) continue;
 
+                // Зберігаємо абсолютну позицію entity у plotLevel
                 saved.add(new SavedEntity(
                         tag,
-                        entity.getX() - plotCenter.getX(),
-                        entity.getY() - plotCenter.getY(),
-                        entity.getZ() - plotCenter.getZ()
+                        entity.getX(),
+                        entity.getY(),
+                        entity.getZ()
                 ));
                 entity.discard();
             }
@@ -367,6 +374,7 @@ public class PlanetTeleportHandler {
 
     /**
      * Відтворює збережені plot-entities у новому plot'і після assembleBlocks.
+     * Позиція рахується через зміщення між старим і новим plotCenter.
      */
     private static void spawnPlotEntities(
             ServerLevel toLevel,
@@ -374,18 +382,34 @@ public class PlanetTeleportHandler {
             BlockPos oldPlotCenter,
             BlockPos newPlotCenter
     ) {
+        // Зміщення між старим plot'ом і новим у toLevel
+        double shiftX = newPlotCenter.getX() - oldPlotCenter.getX();
+        double shiftY = newPlotCenter.getY() - oldPlotCenter.getY();
+        double shiftZ = newPlotCenter.getZ() - oldPlotCenter.getZ();
 
         for (SavedEntity se : entities) {
             CompoundTag tag = se.nbt().copy();
 
-            // Оновлюємо позицію в NBT
+            // Нова абсолютна позиція = стара + зміщення між center'ами
+            double newX = se.absPlotX() + shiftX;
+            double newY = se.absPlotY() + shiftY;
+            double newZ = se.absPlotZ() + shiftZ;
+
+            // Оновлюємо Pos в NBT
             ListTag posList = new ListTag();
-            posList.add(DoubleTag.valueOf(se.relX() + newPlotCenter.getX()));
-            posList.add(DoubleTag.valueOf(se.relY() + newPlotCenter.getY()));
-            posList.add(DoubleTag.valueOf(se.relZ() + newPlotCenter.getZ()));
+            posList.add(DoubleTag.valueOf(newX));
+            posList.add(DoubleTag.valueOf(newY));
+            posList.add(DoubleTag.valueOf(newZ));
             tag.put("Pos", posList);
 
-            // Скидаємо UUID щоб уникнути конфліктів з оригінальною entity
+            // TileX/Y/Z для HangingEntity (картини, рамки, світильники)
+            if (tag.contains("TileX")) {
+                tag.putInt("TileX", (int) Math.floor(newX));
+                tag.putInt("TileY", (int) Math.floor(newY));
+                tag.putInt("TileZ", (int) Math.floor(newZ));
+            }
+
+            // Скидаємо UUID щоб уникнути конфліктів
             tag.remove("UUID");
 
             EntityType.create(tag, toLevel)
@@ -394,7 +418,7 @@ public class PlanetTeleportHandler {
     }
 
     /**
-     * Телепортує всіх tracking entities (гравців і мобів) у toLevel з відповідними офсетами.
+     * Телепортує всі tracking entities (гравців і мобів) у toLevel з відповідними офсетами.
      */
     private static void teleportAllEntities(
             List<Entity> trackers,
@@ -415,9 +439,8 @@ public class PlanetTeleportHandler {
                 if (clearOrigin) playerOriginPlanet.remove(player.getUUID());
                 cooldowns.put(player.getUUID(), COOLDOWN_TICKS);
             } else {
-                // Для звичайних entities — teleportTo з dimension change
-                entity.teleportTo(toLevel, tx, ty, tz, Set.of(),
-                        entity.getYRot(), entity.getXRot());
+                entity.teleportTo(toLevel, tx, ty, tz,
+                        Set.of(), entity.getYRot(), entity.getXRot());
             }
         }
     }

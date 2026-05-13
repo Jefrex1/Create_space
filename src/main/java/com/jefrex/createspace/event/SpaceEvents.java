@@ -40,7 +40,7 @@ public class SpaceEvents {
             noAirTicks.remove(id);
 
             // витрачаємо повітря з балону тільки якщо не в атмосфері
-            if (hasDivingGear(player) && !isInAirField(player)) {
+            if (hasDivingGear(player) && !isInAirField(player) && !player.isCreative()) {
                 if (player.level().getGameTime() % 20 == 0) {
                     var backtanks = BacktankUtil.getAllWithAir(player);
                     if (!backtanks.isEmpty()) {

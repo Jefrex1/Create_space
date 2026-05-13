@@ -6,8 +6,8 @@
   "block.create_space.air_field": "Air Field",
   "block.create_space.regolith": "Regolith",
   "block.create_space.lunar_bit": "Liunar Bit",
-  "block.create_space.cheremsha": "Cheremsha",
-  "block.create_space.brdish": "Brdish",
+  "block.create_space.cheremsha": "ЧЕРЕМША",
+  "block.create_space.brdish": "БРДЫЩ",
 
   "item.create_space.example_item": "Example Item",
   "item.create_space.air_gun": "Air gun",
