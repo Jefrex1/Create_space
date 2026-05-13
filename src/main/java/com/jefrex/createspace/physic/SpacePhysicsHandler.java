@@ -2,7 +2,6 @@ package com.jefrex.createspace.physic;
 
 import com.jefrex.createspace.CreateSpace;
 import com.jefrex.createspace.block.ModBlocks;
-import com.jefrex.createspace.physic.DimensionConfig;
 import com.simibubi.create.content.equipment.armor.BacktankUtil;
 import com.simibubi.create.content.equipment.armor.DivingBootsItem;
 import com.simibubi.create.content.equipment.armor.DivingHelmetItem;
@@ -17,10 +16,51 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingBreatheEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 @EventBusSubscriber(modid = CreateSpace.MODID)
 public class SpacePhysicsHandler {
+
+    // Ключ у PersistentData для трекінгу поточного виміру
+    private static final String DIM_KEY      = "space_physics_dim";
+    private static final String VEL_X_KEY    = "last_vel_x";
+    private static final String VEL_Y_KEY    = "last_vel_y";
+    private static final String VEL_Z_KEY    = "last_vel_z";
+
+    // =========================================================================
+    // Скидаємо фізику при зміні виміру (телепорт на планету/з планети)
+    // =========================================================================
+    @SubscribeEvent
+    public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        resetSpacePhysics(event.getEntity());
+    }
+
+    // Також скидаємо при логіні — на випадок якщо гравець вийшов у космосі
+    @SubscribeEvent
+    public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        Player player = event.getEntity();
+        ResourceLocation dim = player.level().dimension().location();
+        // Якщо гравець залогінився не в space dimension — скидаємо
+        if (!DimensionConfig.isSpaceDimension(dim)) {
+            resetSpacePhysics(player);
+        }
+    }
+
+    /**
+     * Скидає всю космічну фізику для гравця.
+     * Викликається при телепорті між вимірами або логіні.
+     */
+    private static void resetSpacePhysics(Player player) {
+        player.setNoGravity(false);
+        var data = player.getPersistentData();
+        data.remove(VEL_X_KEY);
+        data.remove(VEL_Y_KEY);
+        data.remove(VEL_Z_KEY);
+        data.remove(DIM_KEY);
+    }
+
+    // =========================================================================
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
@@ -28,7 +68,14 @@ public class SpacePhysicsHandler {
         ResourceLocation dim = entity.level().dimension().location();
 
         DimensionConfig cfg = DimensionConfig.get(dim);
-        if (cfg == null) return; // вимір не в конфізі — ігноруємо
+
+        // Якщо вимір НЕ в конфізі — скидаємо NoGravity і виходимо.
+        // Це важливо щоб після телепорту на звичайну планету фізика
+        // не залишалась космічною.
+        if (cfg == null) {
+            if (entity.isNoGravity()) entity.setNoGravity(false);
+            return;
+        }
 
         boolean inAtmosphere = isInAtmosphere(entity, cfg);
 
@@ -53,12 +100,16 @@ public class SpacePhysicsHandler {
         }
     }
 
+    // =========================================================================
+
     private static void applySpacePhysics(Player player, boolean inAtmosphere, DimensionConfig cfg) {
         if (inAtmosphere || player.onGround() || player.isSwimming() || player.getAbilities().flying) {
+            // Повертаємо нормальну фізику
             player.setNoGravity(false);
-            player.getPersistentData().remove("last_vel_x");
-            player.getPersistentData().remove("last_vel_y");
-            player.getPersistentData().remove("last_vel_z");
+            var data = player.getPersistentData();
+            data.remove(VEL_X_KEY);
+            data.remove(VEL_Y_KEY);
+            data.remove(VEL_Z_KEY);
             return;
         }
 
@@ -66,9 +117,9 @@ public class SpacePhysicsHandler {
         Vec3 currentVel = player.getDeltaMovement();
         var data = player.getPersistentData();
 
-        double lastX = data.contains("last_vel_x") ? data.getDouble("last_vel_x") : currentVel.x;
-        double lastY = data.contains("last_vel_y") ? data.getDouble("last_vel_y") : currentVel.y;
-        double lastZ = data.contains("last_vel_z") ? data.getDouble("last_vel_z") : currentVel.z;
+        double lastX = data.contains(VEL_X_KEY) ? data.getDouble(VEL_X_KEY) : currentVel.x;
+        double lastY = data.contains(VEL_Y_KEY) ? data.getDouble(VEL_Y_KEY) : currentVel.y;
+        double lastZ = data.contains(VEL_Z_KEY) ? data.getDouble(VEL_Z_KEY) : currentVel.z;
 
         if (player.horizontalCollision || player.verticalCollision) {
             double nextX = currentVel.x;
@@ -88,7 +139,7 @@ public class SpacePhysicsHandler {
         }
 
         double finalX = currentVel.x * cfg.horizontal_stabilizer;
-        double finalY = currentVel.y * cfg.vertical_stabilizer - cfg.gravity; // місячна гравітація
+        double finalY = currentVel.y * cfg.vertical_stabilizer - cfg.gravity;
         double finalZ = currentVel.z * cfg.horizontal_stabilizer;
 
         Vec3 finalMotion = new Vec3(finalX, finalY, finalZ);
@@ -101,9 +152,9 @@ public class SpacePhysicsHandler {
             finalMotion = finalMotion.add(0, -0.005, 0);
 
         player.setDeltaMovement(finalMotion);
-        data.putDouble("last_vel_x", finalMotion.x);
-        data.putDouble("last_vel_y", finalMotion.y);
-        data.putDouble("last_vel_z", finalMotion.z);
+        data.putDouble(VEL_X_KEY, finalMotion.x);
+        data.putDouble(VEL_Y_KEY, finalMotion.y);
+        data.putDouble(VEL_Z_KEY, finalMotion.z);
 
         if (player instanceof LivingEntity living) {
             living.xxa = 0; living.yya = 0; living.zza = 0;
@@ -124,8 +175,10 @@ public class SpacePhysicsHandler {
         entity.setDeltaMovement(newMotion);
     }
 
+    // =========================================================================
+
     public static boolean isInAtmosphere(Entity entity, DimensionConfig cfg) {
-        if (!cfg.has_atmosphere_blocks) return false; // місяць — атмосфери немає взагалі
+        if (!cfg.has_atmosphere_blocks) return false;
 
         BlockPos pos = entity.blockPosition();
         if (isAtmosphereBlock(entity, pos) || isAtmosphereBlock(entity, pos.above())) return true;
@@ -145,7 +198,6 @@ public class SpacePhysicsHandler {
         return false;
     }
 
-    // Перевантаження для зворотної сумісності зі SpaceEvents
     public static boolean isInAtmosphere(Entity entity) {
         DimensionConfig cfg = DimensionConfig.get(entity.level().dimension().location());
         if (cfg == null) return false;
