@@ -8,6 +8,8 @@ import com.jefrex.createspace.item.ModCreativeModeTabs;
 import com.jefrex.createspace.item.ModItems;
 import com.jefrex.createspace.network.AirGunShootPayload;
 import com.jefrex.createspace.physic.DimensionConfig;
+import com.jefrex.createspace.registry.ModBlockEntities;
+import com.jefrex.createspace.registry.ModParticles;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
@@ -43,12 +45,14 @@ public class CreateSpace {
 
         ModItems.register(modEventBus);
         ModBlocks.register(modEventBus);
+        ModParticles.PARTICLE_TYPES.register(modEventBus);
         // CreateSpace.java
         modEventBus.addListener((FMLCommonSetupEvent e) -> DimensionConfig.load());
 
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(MeteoriteEvent.class);
         ModEntities.ENTITY_TYPES.register(modEventBus);
+        ModBlockEntities.BLOCK_ENTITY_TYPES.register(modEventBus);
 
         modEventBus.addListener(this::addCreative);
 

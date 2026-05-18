@@ -4,7 +4,7 @@
 	"textures": {
 		"0": "create_space:item/airguntexture",
 		"1": "create_space:item/airguntexture2",
-		"particle": "airguntexture"
+		"particle": "create_space:item/airguntexture"
 	},
 	"elements": [
 		{

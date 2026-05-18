@@ -62,6 +62,12 @@ public class ModBlocks {
     public static final DeferredItem<BlockItem> BRDISH_ITEM =
             ITEMS.registerSimpleBlockItem("brdish", BRDISH);
 
+    public static final DeferredBlock<TurbineBlock> TURBINE =
+            BLOCKS.register("turbine", TurbineBlock::new);
+
+    public static final DeferredItem<BlockItem> TURBINE_ITEM =
+            ITEMS.registerSimpleBlockItem("turbine", TURBINE);
+
     public static void register(IEventBus eventBus) {
         BLOCKS.register(eventBus);
         ITEMS.register(eventBus);

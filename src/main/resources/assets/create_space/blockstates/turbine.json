@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=up":    { "model": "create_space:block/turbine", "x": 180 },
+    "facing=down":  { "model": "create_space:block/turbine" },
+    "facing=north": { "model": "create_space:block/turbine", "x": 90, "y": 180 },
+    "facing=south": { "model": "create_space:block/turbine", "x": 90 },
+    "facing=east":  { "model": "create_space:block/turbine", "x": 90, "y": 270 },
+    "facing=west":  { "model": "create_space:block/turbine", "x": 90, "y": 90 }
+  }
+}

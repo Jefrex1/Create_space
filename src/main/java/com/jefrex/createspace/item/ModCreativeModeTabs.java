@@ -26,6 +26,7 @@ public class ModCreativeModeTabs {
                         output.accept(ModBlocks.LUNAR_BIT);
                         output.accept(ModBlocks.CHEREMSHA);
                         output.accept(ModBlocks.BRDISH);
+                        output.accept(ModBlocks.TURBINE);
                     }).build());
 
     public static void register(IEventBus eventBus) {
