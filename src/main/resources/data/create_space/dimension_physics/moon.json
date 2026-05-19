@@ -2,7 +2,11 @@
   "dimension": "create_space:moon",
   "priority": 1000,
   "base_gravity": [0.0, -1.0, 0.0],
-  "base_pressure": 0.01,
+  "base_pressure": 0.2,
   "universal_drag": 0.0,
+  "pressure_function": [
+    { "altitude": 320.0,      "value": 0.15,     "slope": -0.020989 },
+    { "altitude": 500.0,      "value": 0.1,      "slope": -0.020989 }
+  ],
   "magnetic_north": [0.0, 0.0, 0.0]
 }
