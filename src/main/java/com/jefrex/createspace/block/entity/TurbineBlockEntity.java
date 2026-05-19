@@ -3,6 +3,10 @@ package com.jefrex.createspace.block.entity;
 import com.jefrex.createspace.block.TurbineBlock;
 import com.jefrex.createspace.particle.TurbineFlameParticleOptions;
 import com.jefrex.createspace.registry.ModBlockEntities;
+import dev.ryanhcode.sable.api.block.BlockEntitySubLevelActor;
+import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
+import dev.ryanhcode.sable.physics.config.dimension_physics.DimensionPhysicsData;
+import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -10,13 +14,40 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3d;
 
-public class TurbineBlockEntity extends BlockEntity {
+public class TurbineBlockEntity extends BlockEntity implements BlockEntitySubLevelActor {
 
     public TurbineBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.TURBINE.get(), pos, state);
     }
 
+    // Цей метод викликається Sable кожен physics tick
+    @Override
+    public void sable$physicsTick(ServerSubLevel subLevel, RigidBodyHandle handle, double timeStep) {
+        BlockState state = this.getBlockState();
+        if (!state.getValue(TurbineBlock.POWERED)) return;
+
+        Direction facing = state.getValue(TurbineBlock.FACING);
+
+        // Отримуємо тиск в поточній позиції
+        Vector3d pos = new Vector3d(this.getBlockPos().getX(), this.getBlockPos().getY(), this.getBlockPos().getZ());
+        double pressure = DimensionPhysicsData.getAirPressure(subLevel.getLevel(), pos);
+
+        double thrust = 250.0 * pressure;
+
+        Vec3 center = Vec3.atCenterOf(this.getBlockPos());
+        Vec3 force = new Vec3(
+                -facing.getStepX() * thrust * timeStep,
+                -facing.getStepY() * thrust * timeStep,
+                -facing.getStepZ() * thrust * timeStep
+        );
+
+        handle.applyImpulseAtPoint(center, force);
+    }
+
+    // Частинки залишаються тут
     public static void serverTick(Level level, BlockPos pos, BlockState state, TurbineBlockEntity be) {
         if (!state.getValue(TurbineBlock.POWERED)) return;
         if (!(level instanceof ServerLevel serverLevel)) return;
