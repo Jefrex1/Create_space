@@ -19,7 +19,11 @@ public class ModCreativeModeTabs {
             () -> CreativeModeTab.builder().icon(() -> new ItemStack(ModItems.AIRGUN.get()))
                     .title(Component.translatable("creativetab.createspace.createspacetab"))
                     .displayItems((itemDisplayParameters, output) -> {
+                        //Items
                         output.accept(ModItems.AIRGUN);
+                        output.accept(ModItems.ALUMINIUM_NUGGET);
+                        output.accept(ModItems.ALUMINIUM_INGOT);
+                        //Blocks
                         output.accept(ModBlocks.GRAVITY_FIELD);
                         output.accept(ModBlocks.AIR_FIELD);
                         output.accept(ModBlocks.REGOLITH);
@@ -27,6 +31,7 @@ public class ModCreativeModeTabs {
                         output.accept(ModBlocks.CHEREMSHA);
                         output.accept(ModBlocks.BRDISH);
                         output.accept(ModBlocks.TURBINE);
+                        output.accept(ModBlocks.ALUMINIUM_ORE);
                     }).build());
 
     public static void register(IEventBus eventBus) {

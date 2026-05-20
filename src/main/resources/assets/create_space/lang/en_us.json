@@ -1,17 +1,18 @@
 {
   "itemGroup.create_space": "Example Mod Tab",
 
-  "block.create_space.example_block": "Example Block",
   "block.create_space.gravity_field": "Gravity Field",
   "block.create_space.air_field": "Air Field",
   "block.create_space.regolith": "Regolith",
   "block.create_space.lunar_bit": "Liunar Bit",
   "block.create_space.turbine": "Turbine",
+  "block.create_space.aluminium_ore": "Aluminium Ore",
   "block.create_space.cheremsha": "ЧЕРЕМША",
   "block.create_space.brdish": "БРДЫЩ",
 
-  "item.create_space.example_item": "Example Item",
   "item.create_space.air_gun": "Air gun",
+  "item.create_space.aluminium_nugget": "Aluminium Nugget",
+  "item.create_space.aluminium_ingot": "Aluminium Ingot",
 
   "entity.create_space.meteorite": "Meteorite",
 

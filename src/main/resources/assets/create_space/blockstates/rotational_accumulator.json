@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=north": { "model": "create_space:block/rotational_accumulator" },
+    "facing=south": { "model": "create_space:block/rotational_accumulator", "y": 180 },
+    "facing=east":  { "model": "create_space:block/rotational_accumulator", "y": 90 },
+    "facing=west":  { "model": "create_space:block/rotational_accumulator", "y": 270 },
+    "facing=up":    { "model": "create_space:block/rotational_accumulator", "x": -90 },
+    "facing=down":  { "model": "create_space:block/rotational_accumulator", "x": 90 }
+  }
+}

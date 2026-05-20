@@ -44,7 +44,7 @@ public class TurbineBlock extends Block implements EntityBlock {
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         Direction facing = context.getClickedFace();
-        if (context.getPlayer() != null && context.getPlayer().isCrouching()) {
+        if (context.getPlayer() != null && context.getPlayer().isShiftKeyDown()) {
             facing = facing.getOpposite();
         }
         boolean powered = context.getLevel().hasNeighborSignal(context.getClickedPos());

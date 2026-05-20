@@ -8,6 +8,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredBlock;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -67,6 +68,23 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> TURBINE_ITEM =
             ITEMS.registerSimpleBlockItem("turbine", TURBINE);
+
+    public static final DeferredBlock<Block> ALUMINIUM_ORE =
+            BLOCKS.register("aluminium_ore", AluminumOreBlock::new);
+
+    public static final DeferredItem<BlockItem> ALUMINIUM_ORE_ITEM =
+            ITEMS.registerSimpleBlockItem("aluminium_ore", ALUMINIUM_ORE);
+
+    public static final DeferredHolder<Block, RotationalAccumulatorBlock> ROTATIONAL_ACCUMULATOR =
+            BLOCKS.registerBlock("rotational_accumulator", RotationalAccumulatorBlock::new,
+                    BlockBehaviour.Properties.of()
+                            .strength(3.5f, 6.0f)
+                            .sound(SoundType.COPPER)
+                            .requiresCorrectToolForDrops()
+                            .noOcclusion());
+
+    public static final DeferredItem<BlockItem> ROTATIONAL_ACCUMULATOR_ITEM =
+            ITEMS.registerSimpleBlockItem("rotational_accumulator", ROTATIONAL_ACCUMULATOR);
 
     public static void register(IEventBus eventBus) {
         BLOCKS.register(eventBus);
