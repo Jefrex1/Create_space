@@ -17,12 +17,15 @@ import java.util.List;
 
 public class RotationalAccumulatorBlockEntity extends GeneratingKineticBlockEntity {
 
-    public static final float MAX_CHARGE = 80f;
+    public static final float MAX_CHARGE = 8000f;
     public static final float MAX_OUTPUT_RPM = 256f;
 
     private float charge = 0f;
     private int redstoneSignal = 0;
     private float inputRpm = 0f;
+    private boolean isGenerating = false;
+    private float lastNotifiedCharge = -1f;
+    public boolean isGenerating() { return isGenerating; }
 
     public RotationalAccumulatorBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -38,6 +41,12 @@ public class RotationalAccumulatorBlockEntity extends GeneratingKineticBlockEnti
         boolean powered = state.getValue(RotationalAccumulatorBlock.POWERED);
 
         if (!powered) {
+            // Виходимо з режиму генерації
+            if (be.isGenerating) {
+                be.isGenerating = false;
+                be.updateGeneratedRotation();
+            }
+
             float incoming = Math.abs(be.getSpeed());
             be.inputRpm = incoming;
             if (incoming > 0 && be.charge < MAX_CHARGE) {
@@ -46,33 +55,43 @@ public class RotationalAccumulatorBlockEntity extends GeneratingKineticBlockEnti
                 be.charge = Math.min(MAX_CHARGE, be.charge + rotationsThisTick);
                 be.setChanged();
 
-                // Щойно заповнився — переприєднуємо щоб відкрити другий шафт
                 if (prevCharge < MAX_CHARGE && be.charge >= MAX_CHARGE) {
                     be.detachKinetics();
                     be.attachKinetics();
                 }
 
-                if (level.getGameTime() % 20 == 0) be.notifyUpdate();
+                be.notifyUpdate();
+                be.updateComparator(level, pos);
             }
+
         } else {
-            // Розрядка: списуємо рівно стільки оборотів скільки віддаємо
             if (be.charge > 0) {
+                // Входимо в режим генерації якщо ще не увійшли
+                if (!be.isGenerating) {
+                    be.isGenerating = true;
+                    be.detachKinetics();
+                    be.attachKinetics(); // ← це також перераховує стрес capacity
+                }
+
                 float outputRpm = be.calculateOutputRpm();
-                float rotationsThisTick = outputRpm / 1200f; // скільки оборотів за цей тік
+                float rotationsThisTick = outputRpm / 1200f;
 
                 if (be.charge >= rotationsThisTick) {
                     be.charge -= rotationsThisTick;
                 } else {
-                    // Заряду менше ніж треба для повного тіку — віддаємо останнє і зупиняємось
                     be.charge = 0f;
                 }
 
                 be.setChanged();
                 be.updateGeneratedRotation();
-                be.notifyUpdate();
+                if (level.getGameTime() % 20 == 0) be.notifyUpdate();
+                be.updateComparator(level, pos);
+
             } else {
-                // Заряд = 0, зупиняємось
-                if (Math.abs(be.getGeneratedSpeed()) > 0) {
+                // Заряд скінчився — виходимо з режиму генерації
+                if (be.isGenerating) {
+                    be.isGenerating = false;
+                    be.charge = 0f;
                     be.updateGeneratedRotation();
                     be.notifyUpdate();
                 }
@@ -85,9 +104,23 @@ public class RotationalAccumulatorBlockEntity extends GeneratingKineticBlockEnti
         return (redstoneSignal / 15f) * MAX_OUTPUT_RPM;
     }
 
+    private void updateComparator(Level level, BlockPos pos) {
+        // Оновлюємо тільки якщо заряд змінився достатньо
+        // щоб змінився сигнал компаратора (уникаємо зайвих оновлень)
+        float currentSignal = Math.round(getChargePercent() * 15f);
+        float lastSignal = Math.round((lastNotifiedCharge / MAX_CHARGE) * 15f);
+
+        if (currentSignal != lastSignal) {
+            lastNotifiedCharge = charge;
+            level.updateNeighbourForOutputSignal(pos, getBlockState().getBlock());
+        }
+    }
+
     @Override
     public float getGeneratedSpeed() {
-        if (redstoneSignal == 0 || charge <= 0) return 0f;
+        if (!isGenerating) return 0f;        // ← головна перевірка
+        if (redstoneSignal == 0) return 0f;
+        if (charge <= 0) return 0f;
         return calculateOutputRpm();
     }
 
@@ -95,8 +128,7 @@ public class RotationalAccumulatorBlockEntity extends GeneratingKineticBlockEnti
         if (this.redstoneSignal != signal) {
             this.redstoneSignal = signal;
             setChanged();
-            // НЕ викликаємо updateGeneratedRotation тут —
-            // це зробить attachKinetics після перебудови мережі
+            updateGeneratedRotation(); // ← розкоментуй/додай це
         }
     }
 
@@ -110,6 +142,7 @@ public class RotationalAccumulatorBlockEntity extends GeneratingKineticBlockEnti
         super.write(tag, registries, clientPacket);
         tag.putFloat("Charge", charge);
         tag.putInt("RedstoneSignal", redstoneSignal);
+        tag.putBoolean("IsGenerating", isGenerating); // ←
     }
 
     @Override
@@ -117,6 +150,7 @@ public class RotationalAccumulatorBlockEntity extends GeneratingKineticBlockEnti
         super.read(tag, registries, clientPacket);
         charge = tag.getFloat("Charge");
         redstoneSignal = tag.getInt("RedstoneSignal");
+        isGenerating = tag.getBoolean("IsGenerating"); // ←
     }
 
     @Override
@@ -154,5 +188,23 @@ public class RotationalAccumulatorBlockEntity extends GeneratingKineticBlockEnti
             detachKinetics();
             attachKinetics();
         }
+    }
+
+    @Override
+    public float calculateStressApplied() {
+        // Коли заряджаємось — споживаємо стрес як звичайний споживач
+        // Повертаємо 0 бо GeneratingKineticBlockEntity сам рахує через getGeneratedSpeed
+        return 0f;
+    }
+
+    @Override
+    public float calculateAddedStressCapacity() {
+        if (!isGenerating || charge <= 0 || redstoneSignal == 0) return 0f;
+
+        // Capacity пропорційна до залишку заряду
+        float chargePercent = charge / MAX_CHARGE; // від 0.0 до 1.0
+        float maxCapacity = calculateOutputRpm();   // максимум залежить від сигналу
+
+        return maxCapacity * chargePercent;
     }
 }

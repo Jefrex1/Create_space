@@ -20,6 +20,8 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import org.jetbrains.annotations.Nullable;
+import com.simibubi.create.content.kinetics.base.KineticBlock;
+import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
 
 public class RotationalAccumulatorBlock extends KineticBlock implements IBE<RotationalAccumulatorBlockEntity> {
 
@@ -54,6 +56,20 @@ public class RotationalAccumulatorBlock extends KineticBlock implements IBE<Rota
     @Override
     public Direction.Axis getRotationAxis(BlockState state) {
         return state.getValue(FACING).getAxis();
+    }
+
+    @Override
+    public boolean hasAnalogOutputSignal(BlockState state) {
+        return true; // повідомляємо що блок підтримує компаратор
+    }
+
+    @Override
+    public int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof RotationalAccumulatorBlockEntity be) {
+            // Компаратор видає від 0 до 15 в залежності від заряду
+            return Math.round(be.getChargePercent() * 15f);
+        }
+        return 0;
     }
 
     @Override
@@ -93,25 +109,42 @@ public class RotationalAccumulatorBlock extends KineticBlock implements IBE<Rota
         int signal = powered ? level.getBestNeighborSignal(pos) : 0;
 
         if (powered != wasPowered) {
-            // Спочатку встановлюємо сигнал в BE
-            withBlockEntityDo(level, pos, be -> be.setRedstoneSignal(signal));
+            // 1. Оновлюємо blockstate
+            BlockState newState = state.setValue(POWERED, powered);
+            level.setBlock(pos, newState, 3);
 
-            // Потім оновлюємо blockstate
-            level.setBlock(pos, state.setValue(POWERED, powered), 2);
-
-            // Потім перебудовуємо мережу (hasShaftTowards вже бачить новий стан)
             withBlockEntityDo(level, pos, be -> {
+                be.setRedstoneSignal(signal);
                 be.detachKinetics();
                 be.attachKinetics();
             });
 
+            // 2. Примусово повідомляємо сусідні кінетичні блоки
+            //    що наші шафти змінились — вони перебудують свої з'єднання
+            notifyNeighboringKineticBlocks(level, pos, newState);
+
         } else if (powered) {
-            // Тільки сила сигналу змінилась
             withBlockEntityDo(level, pos, be -> {
                 be.setRedstoneSignal(signal);
-                be.updateGeneratedRotation();
-                be.notifyUpdate();
             });
+        }
+    }
+
+    private void notifyNeighboringKineticBlocks(Level level, BlockPos pos, BlockState state) {
+        Direction facing = state.getValue(FACING);
+        // Перевіряємо обидва кінці осі
+        for (Direction dir : new Direction[]{facing, facing.getOpposite()}) {
+            BlockPos neighborPos = pos.relative(dir);
+            BlockState neighborState = level.getBlockState(neighborPos);
+            if (neighborState.getBlock() instanceof KineticBlock) {
+                level.neighborChanged(neighborState, neighborPos,
+                        this, pos, false);
+                // Також примушуємо BE перебудувати з'єднання
+                if (level.getBlockEntity(neighborPos) instanceof KineticBlockEntity kbe) {
+                    kbe.detachKinetics();
+                    kbe.attachKinetics();
+                }
+            }
         }
     }
 

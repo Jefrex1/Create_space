@@ -1,6 +1,3 @@
 {
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "create_space:item/lunar_bit"
-  }
+  "parent": "create_space:block/lunar_bit"
 }

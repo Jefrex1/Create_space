@@ -4,6 +4,7 @@ import com.jefrex.createspace.block.ModBlocks;
 import com.jefrex.createspace.client.renderer.*;
 import com.jefrex.createspace.particle.TurbineFlameParticle;
 import com.jefrex.createspace.registry.ModBlockEntities;
+import com.jefrex.createspace.registry.ModPartialModels;
 import com.jefrex.createspace.registry.ModParticles;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
@@ -43,12 +44,15 @@ public class CreateSpaceClient {
 
         ItemBlockRenderTypes.setRenderLayer(ModBlocks.ATMOSPHERE.get(), RenderType.translucent());
         ItemBlockRenderTypes.setRenderLayer(ModBlocks.AIR_FIELD_AIR.get(), RenderType.translucent());
+        ItemBlockRenderTypes.setRenderLayer(ModBlocks.ROTATIONAL_ACCUMULATOR.get(), RenderType.cutout());
 
         // ← додай цей рядок:
         SimpleBlockEntityVisualizer.builder(ModBlockEntities.ROTATIONAL_ACCUMULATOR.get())
                 .factory(RotationalAccumulatorVisual::new)
                 .skipVanillaRender(be -> false)
                 .apply();
+
+        ModPartialModels.init();
     }
 
     private void onRegisterReloadListeners(RegisterClientReloadListenersEvent event) {
