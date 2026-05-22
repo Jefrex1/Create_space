@@ -45,12 +45,20 @@ public class CreateSpaceClient {
         ItemBlockRenderTypes.setRenderLayer(ModBlocks.ATMOSPHERE.get(), RenderType.translucent());
         ItemBlockRenderTypes.setRenderLayer(ModBlocks.AIR_FIELD_AIR.get(), RenderType.translucent());
         ItemBlockRenderTypes.setRenderLayer(ModBlocks.ROTATIONAL_ACCUMULATOR.get(), RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(ModBlocks.SOLAR_KINETIC.get(), RenderType.cutout()); // ← додай
 
-        // ← додай цей рядок:
         SimpleBlockEntityVisualizer.builder(ModBlockEntities.ROTATIONAL_ACCUMULATOR.get())
                 .factory(RotationalAccumulatorVisual::new)
                 .skipVanillaRender(be -> false)
                 .apply();
+
+        // ← додай цей блок:
+        SimpleBlockEntityVisualizer.builder(ModBlockEntities.SOLAR_KINETIC.get())
+                .factory(SolarKineticVisual::new)
+                .skipVanillaRender(be -> false)
+                .apply();
+
+        ModPartialModels.init();
 
         ModPartialModels.init();
     }

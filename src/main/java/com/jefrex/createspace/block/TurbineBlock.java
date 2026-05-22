@@ -56,11 +56,17 @@ public class TurbineBlock extends Block implements EntityBlock {
     @Override
     public void neighborChanged(BlockState state, Level level, BlockPos pos,
                                 Block neighborBlock, BlockPos neighborPos, boolean movedByPiston) {
-        if (!level.isClientSide) {
-            boolean powered = level.hasNeighborSignal(pos);
-            if (state.getValue(POWERED) != powered) {
-                level.setBlock(pos, state.setValue(POWERED, powered), 3);
-            }
+        if (level.isClientSide) return;
+
+        boolean powered = level.hasNeighborSignal(pos);
+        int signal = powered ? level.getBestNeighborSignal(pos) : 0;
+
+        if (state.getValue(POWERED) != powered) {
+            level.setBlock(pos, state.setValue(POWERED, powered), 3);
+        }
+
+        if (level.getBlockEntity(pos) instanceof TurbineBlockEntity be) {
+            be.setRedstoneSignal(signal);
         }
     }
 
@@ -72,7 +78,7 @@ public class TurbineBlock extends Block implements EntityBlock {
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
                                                                   BlockEntityType<T> type) {
-        if (!level.isClientSide) { // змінив з isClientSide на !isClientSide
+        if (!level.isClientSide) {
             return (lvl, pos, st, be) -> {
                 if (be instanceof TurbineBlockEntity turbineBe) {
                     TurbineBlockEntity.serverTick(lvl, pos, st, turbineBe);

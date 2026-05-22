@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "axis=z": { "model": "create_space:block/solar_panel" },
+    "axis=y": { "model": "create_space:block/solar_panel", "x": 90, "y": 90 },
+    "axis=x": { "model": "create_space:block/solar_panel", "x": 90 }
+  }
+}

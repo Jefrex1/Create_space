@@ -1,6 +1,7 @@
 package com.jefrex.createspace.registry;
 
 import com.jefrex.createspace.block.entity.RotationalAccumulatorBlockEntity;
+import com.jefrex.createspace.block.entity.SolarKineticBlockEntity;
 import com.jefrex.createspace.block.entity.TurbineBlockEntity;
 import com.jefrex.createspace.block.ModBlocks;
 import net.minecraft.core.registries.Registries;
@@ -33,6 +34,22 @@ public class ModBlockEntities {
                         ModBlocks.ROTATIONAL_ACCUMULATOR.get()
                 ).build(null);
         ACCUMULATOR_TYPE_REF[0] = type;
+        return type;
+    });
+
+    @SuppressWarnings("unchecked")
+    private static final BlockEntityType<?>[] SOLAR_TYPE_REF = new BlockEntityType[1];
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SolarKineticBlockEntity>>
+            SOLAR_KINETIC = BLOCK_ENTITY_TYPES.register("solar_panel_adapter", () -> {
+        BlockEntityType<SolarKineticBlockEntity> type =
+                BlockEntityType.Builder.of(
+                        (pos, state) -> new SolarKineticBlockEntity(
+                                (BlockEntityType<SolarKineticBlockEntity>)
+                                        SOLAR_TYPE_REF[0], pos, state),
+                        ModBlocks.SOLAR_KINETIC.get()
+                ).build(null);
+        SOLAR_TYPE_REF[0] = type;
         return type;
     });
 

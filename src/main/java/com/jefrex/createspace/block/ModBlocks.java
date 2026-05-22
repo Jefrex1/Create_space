@@ -86,6 +86,23 @@ public class ModBlocks {
     public static final DeferredItem<BlockItem> ROTATIONAL_ACCUMULATOR_ITEM =
             ITEMS.registerSimpleBlockItem("rotational_accumulator", ROTATIONAL_ACCUMULATOR);
 
+    public static final DeferredBlock<SolarKineticBlock> SOLAR_KINETIC =
+            BLOCKS.registerBlock("solar_panel_adapter", SolarKineticBlock::new,
+                    BlockBehaviour.Properties.of()
+                            .strength(3.0f, 5.0f)
+                            .sound(SoundType.COPPER)
+                            .requiresCorrectToolForDrops()
+                            .noOcclusion());
+
+    public static final DeferredItem<BlockItem> SOLAR_KINETIC_ITEM =
+            ITEMS.registerSimpleBlockItem("solar_panel_adapter", SOLAR_KINETIC);
+
+    public static final DeferredBlock<SolarPanel> SOLAR_PANEL =
+            BLOCKS.register("solar_panel", SolarPanel::new);
+
+    public static final DeferredItem<BlockItem> SOLAR_PANEL_ITEM =
+            ITEMS.registerSimpleBlockItem("solar_panel", SOLAR_PANEL);
+
     public static void register(IEventBus eventBus) {
         BLOCKS.register(eventBus);
         ITEMS.register(eventBus);

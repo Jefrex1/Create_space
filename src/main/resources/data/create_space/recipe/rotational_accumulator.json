@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ABA",
+    "CDC",
+    "ABA"
+  ],
+  "key": {
+    "A": { "item": "create_space:aluminium_ingot" },
+    "B": { "item": "create:shaft" },
+    "C": { "item": "create:iron_sheet" },
+    "D": { "item": "create:flywheel" }
+  },
+  "result": {
+    "id": "create_space:rotational_accumulator",
+    "count": 1
+  }
+}

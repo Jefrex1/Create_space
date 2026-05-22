@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": [
+      { "model": "create_space:block/solar_panel_adapter"}
+    ]
+  }
+}

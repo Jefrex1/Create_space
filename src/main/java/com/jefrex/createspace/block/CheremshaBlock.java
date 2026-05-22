@@ -8,7 +8,6 @@ public class CheremshaBlock extends Block {
     public CheremshaBlock() {
         super(Properties.of()
                 .strength(0.8f, 3.0f)
-                .requiresCorrectToolForDrops()
                 .sound(SoundType.SAND)
                 .instrument(net.minecraft.world.level.block.state.properties.NoteBlockInstrument.BASEDRUM));
     }

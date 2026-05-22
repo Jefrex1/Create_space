@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ABA",
+    " C ",
+    "   "
+  ],
+  "key": {
+    "A": { "item": "create:copper_sheet" },
+    "B": { "item": "create:mechanical_pump" },
+    "C": { "item": "create:basin" }
+  },
+  "result": {
+    "id": "create_space:turbine",
+    "count": 1
+  }
+}

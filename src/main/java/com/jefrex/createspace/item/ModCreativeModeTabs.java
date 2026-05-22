@@ -28,6 +28,8 @@ public class ModCreativeModeTabs {
                         output.accept(ModBlocks.AIR_FIELD);
                         output.accept(ModBlocks.TURBINE);
                         output.accept(ModBlocks.ROTATIONAL_ACCUMULATOR);
+                        output.accept(ModBlocks.SOLAR_KINETIC);
+                        output.accept(ModBlocks.SOLAR_PANEL);
 
                         //Blocks
                         output.accept(ModBlocks.REGOLITH);
