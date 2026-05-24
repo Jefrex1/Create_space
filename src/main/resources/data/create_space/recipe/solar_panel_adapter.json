@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ABA",
+    "CDC",
+    "   "
+  ],
+  "key": {
+    "A": { "item": "create_space:aluminium_ingot" },
+    "B": { "item": "create:shaft" },
+    "C": { "item": "create:andesite_casing" },
+    "D": { "item": "create:rotation_speed_controller" }
+  },
+  "result": {
+    "id": "create_space:solar_panel_adapter",
+    "count": 1
+  }
+}

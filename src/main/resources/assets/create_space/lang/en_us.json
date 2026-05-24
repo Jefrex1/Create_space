@@ -3,11 +3,16 @@
 
   "block.create_space.gravity_field": "Gravity Field",
   "block.create_space.air_field": "Air Field",
+  "block.create_space.turbine": "Turbine",
+  "block.create_space.rotational_accumulator": "Rotational Accumulator",
+  "block.create_space.solar_panel": "Solar Panel",
+  "block.create_space.solar_panel_adapter": "Solar Panel Adapter",
+
   "block.create_space.regolith": "Regolith",
   "block.create_space.lunar_bit": "Liunar Bit",
-  "block.create_space.turbine": "Turbine",
+
   "block.create_space.aluminium_ore": "Aluminium Ore",
-  "block.create_space.rotational_accumulator": "Rotational Accumulator",
+
   "block.create_space.cheremsha": "ЧЕРЕМША",
   "block.create_space.brdish": "БРДЫЩ",
 

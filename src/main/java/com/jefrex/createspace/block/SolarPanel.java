@@ -1,8 +1,11 @@
 package com.jefrex.createspace.block;
 
+import com.jefrex.createspace.block.entity.SolarKineticBlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -43,9 +46,42 @@ public class SolarPanel extends Block {
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return switch (state.getValue(AXIS)) {
-            case Z -> SHAPE_Y;  // горизонтальна
-            case Y -> SHAPE_X;  // вертикальна вздовж X
-            case X -> SHAPE_Z;  // вертикальна вздовж Z
+            case Z -> SHAPE_Y;
+            case Y -> SHAPE_X;
+            case X -> SHAPE_Z;
         };
+    }
+
+    @Override
+    public void onPlace(BlockState state, Level level, BlockPos pos,
+                        BlockState oldState, boolean movedByPiston) {
+        super.onPlace(state, level, pos, oldState, movedByPiston);
+        if (!level.isClientSide) notifyNearbyAdapter(level, pos);
+    }
+
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos,
+                         BlockState newState, boolean movedByPiston) {
+        if (!level.isClientSide && !newState.is(this)) notifyNearbyAdapter(level, pos);
+        super.onRemove(state, level, pos, newState, movedByPiston);
+    }
+
+    private static void notifyNearbyAdapter(Level level, BlockPos panelPos) {
+        for (Direction dir : Direction.values()) {
+            for (int dist = 1; dist <= SolarKineticBlockEntity.MAX_DEPTH + 1; dist++) {
+                BlockPos checkPos = panelPos.relative(dir, dist);
+                BlockState bs = level.getBlockState(checkPos);
+                if (bs.getBlock() instanceof SolarKineticBlock) {
+                    Direction adapterFacing = bs.getValue(SolarKineticBlock.FACING);
+                    if (adapterFacing == dir.getOpposite()) {
+                        if (level.getBlockEntity(checkPos) instanceof SolarKineticBlockEntity be) {
+                            SolarKineticBlockEntity.forceUpdate(level, checkPos, bs, be);
+                        }
+                    }
+                    break;
+                }
+                if (!(bs.getBlock() instanceof SolarPanel)) break;
+            }
+        }
     }
 }

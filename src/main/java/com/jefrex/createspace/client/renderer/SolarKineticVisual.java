@@ -1,5 +1,6 @@
 package com.jefrex.createspace.client.renderer;
 
+import com.jefrex.createspace.block.SolarKineticBlock;
 import com.jefrex.createspace.block.entity.SolarKineticBlockEntity;
 import com.simibubi.create.AllPartialModels;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntityVisual;
@@ -24,18 +25,22 @@ public class SolarKineticVisual
                               float partialTick) {
         super(context, blockEntity, partialTick);
 
+        Direction facing = blockEntity.getBlockState().getValue(SolarKineticBlock.FACING);
+        Direction shaftDir = facing.getOpposite();
+
         shaft = instancerProvider()
                 .instancer(AllInstanceTypes.ROTATING,
                         Models.partial(AllPartialModels.SHAFT_HALF))
                 .createInstance()
-                .setup(blockEntity, Direction.Axis.Y, getShaftSpeed())
+                .setup(blockEntity, facing.getAxis(), getShaftSpeed())
                 .setPosition(getVisualPosition())
-                .rotateToFace(Direction.SOUTH, Direction.DOWN);
+                .rotateToFace(Direction.SOUTH, shaftDir);
         shaft.setChanged();
     }
 
     private float getShaftSpeed() {
-        return blockEntity.getSunFactor() > 0f ? SolarKineticBlockEntity.OUTPUT_RPM : 0f;
+        return (blockEntity.getSunFactor() > 0f && blockEntity.getPanelCount() > 0)
+                ? SolarKineticBlockEntity.OUTPUT_RPM : 0f;
     }
 
     @Override
@@ -45,7 +50,8 @@ public class SolarKineticVisual
 
     @Override
     public void update(float partialTick) {
-        shaft.setup(blockEntity, Direction.Axis.Y, getShaftSpeed()).setChanged();
+        Direction facing = blockEntity.getBlockState().getValue(SolarKineticBlock.FACING);
+        shaft.setup(blockEntity, facing.getAxis(), getShaftSpeed()).setChanged();
     }
 
     @Override

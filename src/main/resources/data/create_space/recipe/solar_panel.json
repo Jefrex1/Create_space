@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ADA",
+    "BCB",
+    "   "
+  ],
+  "key": {
+    "A": { "item": "minecraft:tinted_glass" },
+    "B": { "item": "create_space:aluminium_ingot" },
+    "C": { "item": "minecraft:flint" },
+    "D": { "item": "minecraft:blue_stained_glass" }
+  },
+  "result": {
+    "id": "create_space:solar_panel",
+    "count": 1
+  }
+}
