@@ -62,7 +62,7 @@ public class RotationalAccumulatorVisual
         cogwheel = instancerProvider()
                 .instancer(AllInstanceTypes.ROTATING, Models.partial(ModPartialModels.ACCUMULATOR_CORE))
                 .createInstance()
-                .setup(blockEntity, axis, getCogSpeed())
+                .setup(blockEntity, axis, 0)
                 .setPosition(getVisualPosition())
                 .rotateToFace(rotationAxis());
         cogwheel.setChanged();
@@ -88,13 +88,15 @@ public class RotationalAccumulatorVisual
         return blockEntity.calculateOutputRpm();
     }
 
-    /**
-     * Когвіл завжди крутиться зі швидкістю пропорційною заряду.
-     * √chargePercent дає плавний розгін.
-     */
     private float getCogSpeed() {
-        return RotationalAccumulatorBlockEntity.MAX_OUTPUT_RPM
+        float chargeSpeed = RotationalAccumulatorBlockEntity.MAX_OUTPUT_RPM
                 * (float) Math.sqrt(blockEntity.getChargePercent());
+
+        if (!blockEntity.isGenerating()) {
+            return chargeSpeed - blockEntity.getSpeed();
+        }
+
+        return chargeSpeed;
     }
 
     // ── SimpleTickableVisual ─────────────────────────────────────────────────
