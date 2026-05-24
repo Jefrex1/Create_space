@@ -156,6 +156,8 @@ public class TurbineBlockEntity extends BlockEntity
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, TurbineBlockEntity be) {
         if (!state.getValue(TurbineBlock.POWERED)) return;
+        float powerPercent = be.getPowerPercent();
+        if (powerPercent <= 0) return;
         if (!(level instanceof ServerLevel serverLevel)) return;
 
         Direction facing = state.getValue(TurbineBlock.FACING);
@@ -178,7 +180,7 @@ public class TurbineBlockEntity extends BlockEntity
                 double cy = pos.getY() + 0.5 + fy * (0.5 - spawnBack) + oy;
                 double cz = pos.getZ() + 0.5 + fz * (0.5 - spawnBack) + oz;
 
-                double speed = 0.4 + Math.random() * 0.3;
+                double speed = (0.4 + Math.random() * 0.3) * powerPercent;
 
                 serverLevel.sendParticles(player,
                         TurbineFlameParticleOptions.INSTANCE,

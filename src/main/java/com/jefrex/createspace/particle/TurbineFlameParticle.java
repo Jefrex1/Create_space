@@ -10,6 +10,7 @@ public class TurbineFlameParticle extends TextureSheetParticle {
     private final SpriteSet sprites;
     private float initialSize;
     private boolean hasCollided = false;
+    private final double initialSpeed;
 
     protected TurbineFlameParticle(ClientLevel level, double x, double y, double z,
                                    double vx, double vy, double vz,
@@ -21,6 +22,7 @@ public class TurbineFlameParticle extends TextureSheetParticle {
         this.xd = vx;
         this.yd = vy;
         this.zd = vz;
+        this.initialSpeed = Math.sqrt(vx * vx + vy * vy + vz * vz);
         this.lifetime = 35 + (int)(Math.random() * 20);
         this.initialSize = 0.3f + (float)(Math.random() * 0.1f);
         this.quadSize = this.initialSize;
@@ -62,16 +64,18 @@ public class TurbineFlameParticle extends TextureSheetParticle {
             float t = (progress - 0.9f) / 0.1f;
             this.quadSize = (initialSize * 3.5f) * (1.0f - t);
 
-            this.xd += (Math.random() - 0.5) * 0.05;
-            this.yd += (Math.random() - 0.5) * 0.05;
-            this.zd += (Math.random() - 0.5) * 0.05;
+            double spread = getSpreadScale();
+            this.xd += (Math.random() - 0.5) * 0.05 * spread;
+            this.yd += (Math.random() - 0.5) * 0.05 * spread;
+            this.zd += (Math.random() - 0.5) * 0.05 * spread;
         }
 
         if (progress > 0.6f) {
             float scatter = (progress - 0.6f) / 0.4f; // 0.0 -> 1.0
-            this.xd += (Math.random() - 0.5) * 0.05 * scatter;
-            this.yd += (Math.random() - 0.5) * 0.05 * scatter;
-            this.zd += (Math.random() - 0.5) * 0.05 * scatter;
+            double spread = getSpreadScale();
+            this.xd += (Math.random() - 0.5) * 0.05 * scatter * spread;
+            this.yd += (Math.random() - 0.5) * 0.05 * scatter * spread;
+            this.zd += (Math.random() - 0.5) * 0.05 * scatter * spread;
         }
 
 
@@ -110,6 +114,10 @@ public class TurbineFlameParticle extends TextureSheetParticle {
     private boolean isBlockAt(double x, double y, double z) {
         BlockPos pos = BlockPos.containing(x, y, z);
         return !this.level.getBlockState(pos).isAir();
+    }
+
+    private double getSpreadScale() {
+        return Math.min(1.0, initialSpeed / 0.4);
     }
 
     @Override

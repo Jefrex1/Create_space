@@ -40,7 +40,16 @@ public class SolarPanel extends Block {
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return this.defaultBlockState().setValue(AXIS, context.getClickedFace().getAxis());
+        Direction clickedFace = context.getClickedFace();
+        Axis axis;
+
+        if (clickedFace.getAxis().isHorizontal()) {
+            axis = Axis.Z;
+        } else {
+            axis = context.getHorizontalDirection().getAxis() == Axis.Z ? Axis.X : Axis.Y;
+        }
+
+        return this.defaultBlockState().setValue(AXIS, axis);
     }
 
     @Override
