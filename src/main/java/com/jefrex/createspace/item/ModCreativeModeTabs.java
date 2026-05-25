@@ -34,6 +34,7 @@ public class ModCreativeModeTabs {
                         //Blocks
                         output.accept(ModBlocks.REGOLITH);
                         output.accept(ModBlocks.LUNAR_BIT);
+                        output.accept(ModBlocks.MOON_GRASS);
 
                         //Ores
                         output.accept(ModItems.ALUMINIUM_NUGGET);

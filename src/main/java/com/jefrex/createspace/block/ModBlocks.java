@@ -8,7 +8,6 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredBlock;
-import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -39,6 +38,19 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> REGOLITH_ITEM =
             ITEMS.registerSimpleBlockItem("regolith", REGOLITH);
+
+    public static final DeferredBlock<Block> MOON_GRASS =
+            BLOCKS.registerBlock("moon_grass", MoonGrassBlock::new,
+                    BlockBehaviour.Properties.of()
+                            .instabreak()
+                            .sound(SoundType.GRASS)
+                            .noOcclusion()
+                            .noCollission()
+                            .offsetType(BlockBehaviour.OffsetType.XZ)
+                            .instrument(NoteBlockInstrument.BASEDRUM));
+
+    public static final DeferredItem<BlockItem> MOON_GRASS_ITEM =
+            ITEMS.registerSimpleBlockItem("moon_grass", MOON_GRASS);
 
     public static final DeferredBlock<LunarBitBlock> LUNAR_BIT =
             BLOCKS.registerBlock("lunar_bit", LunarBitBlock::new,

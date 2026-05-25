@@ -14,7 +14,17 @@
     "water_color": 4159204,
     "water_fog_color": 329011
   },
-  "features": [],
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    ["create_space:moon_grass_placed"]
+  ],
   "has_precipitation": false,
   "spawners": {
     "ambient": [],
