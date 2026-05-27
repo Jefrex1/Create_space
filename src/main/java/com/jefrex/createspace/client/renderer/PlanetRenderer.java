@@ -112,6 +112,8 @@ public class PlanetRenderer {
 
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(true);
+        RenderSystem.disableBlend();
+        RenderSystem.enableCull();
     }
 
     private static void renderPlanet(PlanetConfig planet, Matrix4f projectionMatrix, Camera camera) {
@@ -239,6 +241,13 @@ public class PlanetRenderer {
 
         BufferUploader.drawWithShader(buf.buildOrThrow());
         ShaderProgram.unbind();
+
+        // Відновлюємо GL стан щоб не ламати рендер terrain/блоків після нас
+        RenderSystem.enableCull();
+        RenderSystem.disableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);
+        RenderSystem.depthMask(true);
     }
 
     private static void renderRing(PlanetConfig planet, Matrix4f projectionMatrix, Camera camera) {
@@ -310,6 +319,10 @@ public class PlanetRenderer {
 
         BufferUploader.drawWithShader(buf.buildOrThrow());
         ShaderProgram.unbind();
+
+        // Відновлюємо GL стан
+        RenderSystem.enableCull();
+        RenderSystem.disableBlend();
         RenderSystem.depthMask(true);
     }
 
