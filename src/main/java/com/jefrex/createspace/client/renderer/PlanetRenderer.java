@@ -28,7 +28,7 @@ public class PlanetRenderer {
 
     // Викликається з космосу (SPACE_LEVEL)
     public static void render(PoseStack poseStack, Matrix4f projectionMatrix, Camera camera) {
-        renderSkybox(projectionMatrix, camera);
+        renderSkybox(projectionMatrix, camera, 1.0f);
 
         var camPos = camera.getPosition();
 
@@ -71,7 +71,7 @@ public class PlanetRenderer {
                 .orElse(null);
     }
 
-    private static void renderSkybox(Matrix4f projectionMatrix, Camera camera) {
+    public static void renderSkybox(Matrix4f projectionMatrix, Camera camera, float alpha) {
         ShaderProgram shader = VeilRenderSystem.setShader(SKY_SHADER);
         if (shader == null) return;
 
@@ -88,6 +88,7 @@ public class PlanetRenderer {
         setUniformMat4(shader,  "uInvProj",      invProj);
         setUniformMat4(shader,  "uViewMatrix",   viewMatrix);
         setUniformFloat(shader, "uRotation",     rotation);
+        setUniformFloat(shader, "uAlpha",        alpha);
         setUniformInt(shader,   "SkyboxTexture", 0);
 
         RenderSystem.disableDepthTest();

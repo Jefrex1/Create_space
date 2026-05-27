@@ -7,6 +7,7 @@ uniform sampler2D SkyboxTexture;
 uniform mat4 uInvProj;
 uniform mat4 uViewMatrix;
 uniform float uRotation;
+uniform float uAlpha;
 
 void main() {
     vec4 rayClip = vec4(texCoord.x, texCoord.y, -1.0, 1.0);
@@ -22,5 +23,5 @@ void main() {
     float v = acos(clamp(dir.y, -1.0, 1.0)) / 3.14159;
 
     vec3 color = texture(SkyboxTexture, vec2(u, v)).rgb;
-    fragColor = vec4(color, 1.0);
+    fragColor = vec4(color, uAlpha);
 }

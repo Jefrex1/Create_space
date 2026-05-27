@@ -26,6 +26,25 @@ public class SkyObjectAdapter {
         var camPos = camera.getPosition();
         float camY = (float) camPos.y;
 
+        // --- Скайбокс космосу ---
+        String dimId = mc.level.dimension().location().toString();
+        boolean isMoon = dimId.equals("create_space:moon");
+
+        float skyboxAlpha;
+        if (isMoon) {
+            // На місяці — завжди скайбокс космосу
+            skyboxAlpha = 1.0f;
+        } else {
+            // В overworld — плавно з'являємось від Y=500 до Y=700
+            skyboxAlpha = (camY - 500.0f) / 200.0f;
+            skyboxAlpha = Math.max(0.0f, Math.min(1.0f, skyboxAlpha));
+        }
+
+        if (skyboxAlpha > 0.0f) {
+            PlanetRenderer.renderSkybox(projectionMatrix, camera, skyboxAlpha);
+        }
+        // --- Кінець скайбоксу ---
+
         List<PlanetConfig> planets = new ArrayList<>();
         for (SkyObjectConfig obj : objects) {
             float alpha = getSkyAlpha(obj, camY, mc);
